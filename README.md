@@ -29,10 +29,10 @@ RSVP submissions post to `/api/rsvp` and upsert by guest email.
 
 ## Railway
 
-The app includes `railway.json`. Railway builds with `bun run build` and starts with:
+Railway can use its default builder. The app builds with `bun run build` and the package `start` script runs:
 
 ```bash
-bun run db:migrate && bun run start
+bun run db:migrate && next start
 ```
 
 After creating the Railway project and adding a PostgreSQL database, set `DATABASE_URL`, then link and deploy with the Railway CLI:
