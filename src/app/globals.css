@@ -553,7 +553,7 @@ html[data-floral="lush"] .petal-field .petal { opacity: 0.9; }
 .vine-gallery {
   position: relative;
   --vine-progress: 0;
-  height: clamp(700px, 72vw, 900px);
+  height: clamp(840px, 82vw, 1060px);
   max-width: 1080px;
   margin: 0 auto;
   overflow: hidden;
@@ -570,7 +570,7 @@ html[data-floral="lush"] .petal-field .petal { opacity: 0.9; }
 .vine-main {
   fill: none;
   stroke: #536338;
-  stroke-width: 1.05;
+  stroke-width: 0.74;
   stroke-linecap: round;
   stroke-linejoin: round;
   opacity: 0.92;
@@ -580,7 +580,7 @@ html[data-floral="lush"] .petal-field .petal { opacity: 0.9; }
 }
 .vine-shadow {
   stroke: #7a5b35;
-  stroke-width: 1.62;
+  stroke-width: 1.14;
   opacity: 0.42;
 }
 .vine-branch,
@@ -597,11 +597,11 @@ html[data-floral="lush"] .petal-field .petal { opacity: 0.9; }
 }
 .vine-branch {
   stroke: #5d6e3f;
-  stroke-width: 0.44;
+  stroke-width: 0.34;
 }
 .vine-curl {
   stroke: #71824f;
-  stroke-width: 0.28;
+  stroke-width: 0.24;
 }
 .vine-branch.grown,
 .vine-curl.grown {
@@ -702,7 +702,7 @@ html[data-floral="lush"] .petal-field .petal { opacity: 0.9; }
 
 @media (max-width: 700px) {
   .vine-gallery {
-    height: 860px;
+    height: 1180px;
     margin-inline: 0;
   }
   .vine-leaf {
@@ -710,13 +710,13 @@ html[data-floral="lush"] .petal-field .petal { opacity: 0.9; }
     height: clamp(84px, 25vw, 102px);
   }
   .vine-main {
-    stroke-width: 1.2;
+    stroke-width: 0.78;
   }
   .vine-shadow {
-    stroke-width: 1.86;
+    stroke-width: 1.2;
   }
   .vine-branch {
-    stroke-width: 0.54;
+    stroke-width: 0.38;
   }
 }
 
