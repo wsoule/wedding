@@ -49,8 +49,109 @@ export function Hero({ couple, dateText, venueShort }) {
 }
 
 // ── Gallery ─────────────────────────────────────────────────────────────────
-// Uses <image-slot> web components — user drags engagement photos in and they
-// persist. Clicking a filled slot opens the lightbox.
+// A scroll-grown vine: each image slot is clipped into a leaf frame and appears
+// as the vine draws through the section.
+
+const VINE_LEAVES = [
+  {
+    id: 'eng-1',
+    label: 'Favorite',
+    side: -1,
+    x: 28,
+    y: 14,
+    angle: -24,
+    grow: 0.12,
+    branch: 'M49 12 C44 10 38 11 33 14 C30 16 28 18 26 20',
+  },
+  {
+    id: 'eng-2',
+    label: 'Engagement',
+    side: 1,
+    x: 72,
+    y: 24,
+    angle: 21,
+    grow: 0.22,
+    branch: 'M51 21 C57 19 64 20 69 23 C72 25 74 27 76 30',
+  },
+  {
+    id: 'eng-3',
+    label: 'Candid',
+    side: -1,
+    x: 23,
+    y: 36,
+    angle: -18,
+    grow: 0.34,
+    branch: 'M48 34 C42 31 35 31 29 34 C25 36 22 39 20 42',
+  },
+  {
+    id: 'eng-4',
+    label: 'Photo',
+    side: 1,
+    x: 77,
+    y: 45,
+    angle: 17,
+    grow: 0.46,
+    branch: 'M52 44 C60 42 68 43 74 47 C78 50 80 53 81 56',
+  },
+  {
+    id: 'eng-5',
+    label: 'Laughter',
+    side: -1,
+    x: 30,
+    y: 59,
+    angle: -20,
+    grow: 0.58,
+    branch: 'M49 57 C44 55 38 56 33 59 C30 61 28 64 27 67',
+  },
+  {
+    id: 'eng-6',
+    label: 'Walk',
+    side: 1,
+    x: 73,
+    y: 69,
+    angle: 23,
+    grow: 0.69,
+    branch: 'M50 68 C57 65 64 66 70 70 C74 73 76 77 77 81',
+  },
+  {
+    id: 'eng-7',
+    label: 'Proposal',
+    side: -1,
+    x: 25,
+    y: 83,
+    angle: -25,
+    grow: 0.81,
+    branch: 'M48 80 C42 78 36 79 31 82 C27 84 24 88 22 92',
+  },
+  {
+    id: 'eng-8',
+    label: 'Us',
+    side: 1,
+    x: 65,
+    y: 91,
+    angle: 18,
+    grow: 0.89,
+    branch: 'M48 91 C53 87 59 87 64 90 C68 92 70 95 72 99',
+  },
+];
+
+const VINE_TENDRILS = [
+  { d: 'M52 8 C60 5 63 13 57 15 C52 16 54 10 59 11', grow: 0.08 },
+  { d: 'M47 29 C38 25 37 35 43 36 C48 37 47 31 42 31', grow: 0.3 },
+  { d: 'M55 51 C66 49 65 60 58 60 C53 60 55 54 61 55', grow: 0.52 },
+  { d: 'M45 75 C36 72 36 83 43 84 C48 84 48 78 42 78', grow: 0.76 },
+];
+
+const VINE_SMALL_LEAVES = [
+  { x: 45, y: 9, scale: 0.9, angle: -36, grow: 0.07 },
+  { x: 55, y: 18, scale: 0.78, angle: 37, grow: 0.17 },
+  { x: 46, y: 27, scale: 0.72, angle: -44, grow: 0.28 },
+  { x: 55, y: 40, scale: 0.82, angle: 43, grow: 0.4 },
+  { x: 45, y: 50, scale: 0.86, angle: -38, grow: 0.51 },
+  { x: 53, y: 62, scale: 0.74, angle: 34, grow: 0.63 },
+  { x: 44, y: 73, scale: 0.76, angle: -43, grow: 0.74 },
+  { x: 51, y: 86, scale: 0.92, angle: 36, grow: 0.85 },
+];
 
 export function Gallery() {
   const [lbIndex, setLbIndex] = React.useState(null);
@@ -80,6 +181,38 @@ export function Gallery() {
   }, [collectImages]);
 
   React.useEffect(() => {
+    let raf = 0;
+    const stage = containerRef.current;
+    if (!stage) return undefined;
+
+    const growEls = Array.from(stage.querySelectorAll('[data-grow]'));
+    const clamp = (n) => Math.max(0, Math.min(1, n));
+    const update = () => {
+      raf = 0;
+      const rect = stage.getBoundingClientRect();
+      const vh = window.innerHeight || document.documentElement.clientHeight;
+      const progress = clamp((vh * 0.82 - rect.top) / (rect.height * 0.88));
+      stage.style.setProperty('--vine-progress', progress.toFixed(3));
+      growEls.forEach((el) => {
+        const growAt = Number(el.getAttribute('data-grow') || 0);
+        el.classList.toggle('grown', progress >= growAt);
+      });
+    };
+    const requestUpdate = () => {
+      if (!raf) raf = window.requestAnimationFrame(update);
+    };
+
+    update();
+    window.addEventListener('scroll', requestUpdate, { passive: true });
+    window.addEventListener('resize', requestUpdate);
+    return () => {
+      if (raf) window.cancelAnimationFrame(raf);
+      window.removeEventListener('scroll', requestUpdate);
+      window.removeEventListener('resize', requestUpdate);
+    };
+  }, []);
+
+  React.useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const onClick = (e) => {
@@ -107,17 +240,6 @@ export function Gallery() {
     return () => window.removeEventListener('keydown', onKey);
   }, [lbIndex, images.length]);
 
-  const slots = [
-  { cls: 'g-1', id: 'eng-1', label: 'Drop your favorite shot' },
-  { cls: 'g-2', id: 'eng-2', label: 'Engagement photo' },
-  { cls: 'g-3', id: 'eng-3', label: 'A candid moment' },
-  { cls: 'g-4', id: 'eng-4', label: 'Drop a photo' },
-  { cls: 'g-5', id: 'eng-5', label: 'A laugh together' },
-  { cls: 'g-6', id: 'eng-6', label: 'Out on a walk' },
-  { cls: 'g-7', id: 'eng-7', label: 'The proposal' },
-  { cls: 'g-8', id: 'eng-8', label: 'Just us' }];
-
-
   return (
     <section id="story" data-screen-label="02 Gallery">
       <div className="section-inner">
@@ -126,13 +248,68 @@ export function Gallery() {
           <h2 className="section-title">Us, in pictures</h2>
           <Divider />
         </div>
-        <div className="gallery-grid reveal delay-1" ref={containerRef}>
-          {slots.map((s, i) =>
-          <image-slot key={s.id} id={s.id} data-idx={i}
-          className={s.cls}
-          shape="rounded" radius="4"
-          placeholder={s.label}></image-slot>
-          )}
+        <div className="vine-gallery reveal delay-1" ref={containerRef}>
+          <svg className="vine-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            <path
+              className="vine-main vine-shadow"
+              pathLength="1"
+              d="M51 3 C43 11 59 18 49 28 C38 39 63 48 50 58 C40 66 54 78 47 88 C43 94 47 98 47 99"
+            />
+            <path
+              className="vine-main"
+              pathLength="1"
+              d="M51 3 C43 11 59 18 49 28 C38 39 63 48 50 58 C40 66 54 78 47 88 C43 94 47 98 47 99"
+            />
+            {VINE_LEAVES.map((leaf) => (
+              <path
+                key={leaf.id}
+                className="vine-branch"
+                pathLength="1"
+                data-grow={leaf.grow}
+                d={leaf.branch}
+              />
+            ))}
+            {VINE_TENDRILS.map((curl, i) => (
+              <path
+                key={`curl-${i}`}
+                className="vine-curl"
+                pathLength="1"
+                data-grow={curl.grow}
+                d={curl.d}
+              />
+            ))}
+            {VINE_SMALL_LEAVES.map((leaf, i) => (
+              <path
+                key={`leaf-${i}`}
+                className="vine-small-leaf"
+                data-grow={leaf.grow}
+                d="M0 0 C-3 -3 -3 -8 0 -11 C3 -8 3 -3 0 0"
+                transform={`translate(${leaf.x} ${leaf.y}) rotate(${leaf.angle}) scale(${leaf.scale})`}
+              />
+            ))}
+          </svg>
+          {VINE_LEAVES.map((leaf, i) => (
+            <div
+              key={leaf.id}
+              className={`vine-leaf ${leaf.side < 0 ? 'left' : 'right'}`}
+              data-idx={i}
+              data-grow={leaf.grow}
+              style={{
+                left: `${leaf.x}%`,
+                top: `${leaf.y}%`,
+                '--leaf-rotate': `${leaf.angle}deg`,
+              }}
+            >
+              <div className="vine-leaf-frame">
+                <image-slot
+                  id={leaf.id}
+                  data-idx={i}
+                  placeholder={leaf.label}
+                  shape="rect"
+                />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
