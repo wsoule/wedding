@@ -1,33 +1,25 @@
-import type { Metadata } from "next";
-import type { ReactNode } from "react";
-import Script from "next/script";
+import type { Metadata, Viewport } from "next";
+import { Figtree, Young_Serif } from "next/font/google";
+import { coupleNames, site } from "@/content/site";
 import "./globals.css";
 
+const youngSerif = Young_Serif({ weight: "400", subsets: ["latin"], variable: "--font-young-serif" });
+const figtree = Figtree({ subsets: ["latin"], variable: "--font-figtree" });
+
 export const metadata: Metadata = {
-  title: "Wyat & Jaden · May 22, 2027",
-  description:
-    "Wyat Soule & Jaden Corliss · May 22, 2027 · Little Flower Barn, Lake Isabella, Michigan",
+  title: { default: coupleNames, template: `%s · ${coupleNames}` },
+  description: `${coupleNames} are getting married ${site.dateLabel} at ${site.venue.name}.`,
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: ReactNode;
-}>) {
+export const viewport: Viewport = {
+  themeColor: "#edf2e6",
+  viewportFit: "cover",
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-floral="subtle">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Pinyon+Script&family=Tangerine:wght@400;700&family=Parisienne&family=Petit+Formal+Script&family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Cardo:ital,wght@0,400;1,400&family=Prata&display=swap"
-        />
-        <Script src="/image-slot.js" strategy="beforeInteractive" />
-      </head>
-      <body>
-        {children}
-      </body>
+    <html lang="en" className={`${youngSerif.variable} ${figtree.variable}`}>
+      <body className="min-h-dvh">{children}</body>
     </html>
   );
 }
