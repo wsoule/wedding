@@ -7,9 +7,20 @@ const cell = (v: unknown) => {
   return `"${(/^[=+\-@]/.test(s) ? `'${s}` : s).replace(/"/g, '""')}"`;
 };
 
-export async function GET() {
+const csvResponse = (rows: unknown[][], name: string) =>
+  new Response(rows.map((r) => r.map(cell).join(",")).join("\r\n"), {
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${name}-${new Date().toISOString().slice(0, 10)}.csv"`,
+    },
+  });
+
+export async function GET(request: Request) {
   if (!(await isAdmin())) return new Response("Unauthorized", { status: 401 });
   const parties = await getPartiesWithGuests();
+  if (new URL(request.url).searchParams.get("type") === "songs") {
+    return csvResponse([["Song", "Requested by"], ...parties.filter((p) => p.song).map((p) => [p.song, p.name])], "song-requests");
+  }
   const header = ["Party", "First name", "Last name", "Child", "Plus one", "Attending", "Meal", "Dietary", "Table", "Address", "Replied", "Note", "Song"];
   const rows = parties.flatMap((p) =>
     p.guests.map((g) => [
@@ -28,11 +39,5 @@ export async function GET() {
       p.song,
     ]),
   );
-  const csv = [header, ...rows].map((r) => r.map(cell).join(",")).join("\r\n");
-  return new Response(csv, {
-    headers: {
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="rsvps-${new Date().toISOString().slice(0, 10)}.csv"`,
-    },
-  });
+  return csvResponse([header, ...rows], "rsvps");
 }

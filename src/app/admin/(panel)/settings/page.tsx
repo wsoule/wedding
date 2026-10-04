@@ -63,6 +63,22 @@ export default async function SettingsPage() {
           )}
         </fieldset>
 
+        <fieldset className="rounded-2xl bg-card p-4 ring-1 ring-lichen">
+          <legend className="sr-only">Wedding day mode</legend>
+          <label className="block">
+            <span className="block font-serif text-xl">Wedding day mode</span>
+            <span className="mb-2 block text-sm text-moss-soft">
+              Shows &ldquo;Today&rdquo; with what&rsquo;s happening now, find your table and the photobooth. Automatic turns it on for May 22 only;
+              turn it on early to preview.
+            </span>
+            <select name="dayOfMode" defaultValue={s.dayOfMode} className="field">
+              <option value="auto">Automatic (on May 22)</option>
+              <option value="on">On now</option>
+              <option value="off">Off</option>
+            </select>
+          </label>
+        </fieldset>
+
         <button className="btn btn-primary w-full">Save settings</button>
       </form>
 

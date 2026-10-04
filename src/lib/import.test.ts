@@ -56,6 +56,13 @@ describe("parseGuestList", () => {
     expect(parseGuestList("foo,bar\n1,2").warnings[0]).toMatch(/first name/i);
   });
 
+  it("reads side and wedding party roles", () => {
+    const { parties } = parseGuestList("Party,First name,Last name,Side,Role\nA,Kat,Lipscomb,Jaden,Bridesmaid\nA,Austin,Lee,Jaden,");
+    expect(parties[0].side).toBe("Jaden");
+    expect(parties[0].guests[0].role).toBe("Bridesmaid");
+    expect(parties[0].guests[1].role).toBeUndefined();
+  });
+
   it("accepts a single Name column", () => {
     const { parties } = parseGuestList("Name,Party\nJordan Smith,A\nSam Lee,A");
     expect(parties[0].guests.map((g) => [g.firstName, g.lastName])).toEqual([

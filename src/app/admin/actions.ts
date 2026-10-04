@@ -193,10 +193,30 @@ export async function runImport(text: string): Promise<{ created: number; skippe
   const existing = new Set((await db.select({ name: parties.name }).from(parties)).map((p) => p.name.toLowerCase()));
   const fresh: ImportParty[] = parsed.filter((p) => !existing.has(p.name.toLowerCase()));
 
+  const partyRoles = new Set((await db.select({ name: weddingParty.name }).from(weddingParty)).map((w) => w.name.toLowerCase()));
   await db.transaction(async (tx) => {
     for (const p of fresh) {
-      const [row] = await tx.insert(parties).values({ name: p.name, address: p.address }).returning({ id: parties.id });
-      if (p.guests.length) await tx.insert(guests).values(p.guests.map((g, i) => ({ ...g, partyId: row.id, sortOrder: i })));
+      const [row] = await tx.insert(parties).values({ name: p.name, address: p.address, side: p.side ?? null }).returning({ id: parties.id });
+      if (p.guests.length) {
+        await tx.insert(guests).values(
+          p.guests.map((g, i) => ({
+            partyId: row.id,
+            firstName: g.firstName,
+            lastName: g.lastName,
+            nickname: g.nickname,
+            isChild: g.isChild,
+            isPlaceholder: g.isPlaceholder,
+            sortOrder: i,
+          })),
+        );
+      }
+      // Bridesmaids, flower girls and so on also go on the wedding party page.
+      for (const g of p.guests.filter((g) => g.role)) {
+        const name = `${g.firstName} ${g.lastName}`.trim();
+        if (partyRoles.has(name.toLowerCase())) continue;
+        partyRoles.add(name.toLowerCase());
+        await tx.insert(weddingParty).values({ name, role: g.role!, side: p.side ?? null, sortOrder: partyRoles.size });
+      }
     }
   });
   refresh();
@@ -215,6 +235,7 @@ export async function saveSettings(form: FormData) {
     kidMealOptions: lines(str(form, "kidMealOptions")),
     rsvpDeadline: opt(form, "rsvpDeadline"),
     notifyEmails: lines(str(form, "notifyEmails")).filter((e) => e.includes("@")),
+    dayOfMode: ["auto", "on", "off"].includes(str(form, "dayOfMode")) ? str(form, "dayOfMode") : "auto",
     updatedAt: new Date(),
   };
   await db.insert(settings).values({ id: 1, ...values }).onConflictDoUpdate({ target: settings.id, set: values });

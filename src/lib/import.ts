@@ -7,8 +7,9 @@ export type ImportGuest = {
   nickname: string | null;
   isChild: boolean;
   isPlaceholder: boolean;
+  role?: string | null;
 };
-export type ImportParty = { name: string; address: string | null; guests: ImportGuest[] };
+export type ImportParty = { name: string; address: string | null; side?: string | null; guests: ImportGuest[] };
 
 export function parseCsv(text: string): string[][] {
   const firstLine = text.split(/\r?\n/, 1)[0] ?? "";
@@ -54,6 +55,8 @@ const aliases: Record<string, string[]> = {
   child: ["child", "kid", "is child", "children", "minor"],
   plusOne: ["plus one", "plus 1", "+1", "plusone", "guest allowed"],
   address: ["address", "mailing address"],
+  side: ["side", "invited by", "invited by...", "guest of"],
+  role: ["role", "wedding party", "part"],
 };
 
 const truthy = (s: string) => /^(y|yes|true|1|x|✓|✔)$/i.test(s.trim());
@@ -90,11 +93,12 @@ export function parseGuestList(text: string): { parties: ImportParty[]; warnings
     const partyName = get(r, col.party) || `${first} ${last}`.trim();
     let party = byName.get(partyName.toLowerCase());
     if (!party) {
-      party = { name: partyName, address: null, guests: [] };
+      party = { name: partyName, address: null, side: null, guests: [] };
       byName.set(partyName.toLowerCase(), party);
       order.push(party);
     }
     party.address ??= get(r, col.address) || null;
+    party.side ??= get(r, col.side) || null;
 
     if (placeholderRow) {
       party.guests.push({ firstName: "", lastName: "", nickname: null, isChild: false, isPlaceholder: true });
@@ -106,6 +110,7 @@ export function parseGuestList(text: string): { parties: ImportParty[]; warnings
       nickname: get(r, col.nickname) || null,
       isChild: truthy(get(r, col.child)),
       isPlaceholder: false,
+      ...(get(r, col.role) ? { role: get(r, col.role) } : {}),
     });
     if (truthy(get(r, col.plusOne))) {
       party.guests.push({ firstName: "", lastName: "", nickname: null, isChild: false, isPlaceholder: true });
