@@ -300,22 +300,22 @@ export function RsvpFlow({ deadlineLabel }: { deadlineLabel: string | null }) {
 
 function Find({ onChoose, pending, deadlineLabel }: { onChoose: (id: string) => void; pending: boolean; deadlineLabel: string | null }) {
   const [q, setQ] = useState("");
-  const [results, setResults] = useState<PartyMatch[] | null>(null);
+  const [found, setFound] = useState<PartyMatch[] | null>(null);
   const latest = useRef(0);
+  const query = q.trim();
+  const ready = query.replace(/\s/g, "").length >= 3;
+  // Keep showing the last results while the next search is in flight.
+  const results = ready ? found : null;
 
   useEffect(() => {
-    const query = q.trim();
-    if (query.replace(/\s/g, "").length < 3) {
-      setResults(null);
-      return;
-    }
+    if (!ready) return;
     const id = ++latest.current;
     const t = setTimeout(async () => {
       const r = await searchParties(query);
-      if (id === latest.current) setResults(r);
+      if (id === latest.current) setFound(r);
     }, 220);
     return () => clearTimeout(t);
-  }, [q]);
+  }, [query, ready]);
 
   return (
     <div>
@@ -401,12 +401,12 @@ function Hello({ party, onBack, onNext }: { party: LoadedParty; onBack: () => vo
     >
       {replied ? (
         <>
-          <p className="text-moss-soft">You've already replied. Here's what we have:</p>
+          <p className="text-moss-soft">You’ve already replied. Here’s what we have:</p>
           <Summary party={party} />
         </>
       ) : (
         <>
-          <p className="text-moss-soft">We've saved {party.guests.length === 1 ? "a seat" : "seats"} for:</p>
+          <p className="text-moss-soft">We’ve saved {party.guests.length === 1 ? "a seat" : "seats"} for:</p>
           <ul className="mt-3 space-y-2">
             {named.map((g) => (
               <li key={g.id} className="flex items-center gap-3 rounded-2xl bg-card px-4 py-3 ring-1 ring-lichen">
