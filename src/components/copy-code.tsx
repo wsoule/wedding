@@ -12,7 +12,7 @@ export function CopyCode({ label, code }: { label: string; code: string }) {
         setCopied(true);
         setTimeout(() => setCopied(false), 1800);
       }}
-      className="mt-3 flex w-full items-center justify-between gap-3 rounded-xl bg-paper px-4 py-2.5 text-left ring-1 ring-lichen"
+      className="mt-4 flex w-full items-center justify-between gap-3 border-y border-dashed border-sage px-1 py-3 text-left"
     >
       <span>
         <span className="block text-sm text-moss-soft">{label}</span>
