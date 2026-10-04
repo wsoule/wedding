@@ -1,13 +1,14 @@
 "use server";
 
 import { and, asc, eq, gt, lt, desc, sql } from "drizzle-orm";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { faqs, guests, hotels, parties, registryLinks, scheduleItems, settings } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
 import { parseGuestList, type ImportParty } from "@/lib/import";
+import { createLimiter } from "@/lib/rate-limit";
 import { SESSION_COOKIE, SESSION_DAYS, createToken, passwordMatches } from "@/lib/session";
 import { contentConfig, contentKinds, type ContentKind } from "./content-config";
 
@@ -17,8 +18,17 @@ const refresh = () => revalidatePath("/", "layout");
 
 // ── Session ────────────────────────────────────────────────────────────────
 
+// 10 wrong passwords per IP per 15 minutes.
+const loginLimiter = createLimiter({ max: 10, windowMs: 15 * 60_000 });
+
 export async function login(_: string | null, form: FormData): Promise<string | null> {
-  if (!passwordMatches(str(form, "password"))) return "That password isn't right.";
+  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  if (loginLimiter.blocked(ip)) return "Too many wrong passwords. Try again in 15 minutes.";
+  if (!passwordMatches(str(form, "password"))) {
+    loginLimiter.fail(ip);
+    return "That password isn't right.";
+  }
+  loginLimiter.reset(ip);
   (await cookies()).set(SESSION_COOKIE, createToken(), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
