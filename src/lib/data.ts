@@ -1,7 +1,8 @@
 import "server-only";
-import { asc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import { db } from "@/db/client";
-import { faqs, guests, hotels, parties, registryLinks, scheduleItems, settings, type Settings } from "@/db/schema";
+import { site } from "@/content/site";
+import { faqs, guests, hotels, parties, photos, registryLinks, scheduleItems, settings, storyItems, weddingParty, type Settings } from "@/db/schema";
 
 const defaultSettings: Settings = {
   id: 1,
@@ -10,6 +11,8 @@ const defaultSettings: Settings = {
   kidMealOptions: [],
   rsvpDeadline: null,
   notifyEmails: [],
+  heroPhotoIds: [],
+  dayOfMode: "auto",
   updatedAt: new Date(0),
 };
 
@@ -22,6 +25,33 @@ export const getSchedule = () => db.select().from(scheduleItems).orderBy(asc(sch
 export const getHotels = () => db.select().from(hotels).orderBy(asc(hotels.sortOrder));
 export const getRegistry = () => db.select().from(registryLinks).orderBy(asc(registryLinks.sortOrder));
 export const getFaqs = () => db.select().from(faqs).orderBy(asc(faqs.sortOrder));
+export const getStory = () => db.select().from(storyItems).orderBy(asc(storyItems.sortOrder));
+export const getWeddingParty = () => db.select().from(weddingParty).orderBy(asc(weddingParty.sortOrder));
+
+export const getGuestPhotos = () =>
+  db.select().from(photos).where(and(eq(photos.kind, "guest"), eq(photos.hidden, false))).orderBy(desc(photos.createdAt));
+
+// Notes guests chose to share, first names only.
+export async function getWishes() {
+  const rows = await db
+    .select({ id: parties.id, message: parties.message, respondedAt: parties.respondedAt })
+    .from(parties)
+    .where(and(eq(parties.messagePublic, true), eq(parties.messageHidden, false), isNotNull(parties.message)))
+    .orderBy(desc(parties.respondedAt));
+  if (rows.length === 0) return [];
+  const gs = await db.select().from(guests).where(inArray(guests.partyId, rows.map((r) => r.id)));
+  return rows.map((r) => {
+    const names = gs.filter((g) => g.partyId === r.id && g.firstName && (!g.isPlaceholder || g.attending)).map((g) => g.firstName);
+    return { id: r.id, message: r.message!, from: names.length === 2 ? names.join(" & ") : names.join(", ") };
+  });
+}
+
+// True on the wedding day (venue time), or when the admin forces it on.
+export function isDayOf(s: Settings, now = new Date()) {
+  if (s.dayOfMode === "on") return true;
+  if (s.dayOfMode === "off") return false;
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Detroit" }).format(now) === site.date;
+}
 
 export async function getParty(id: string) {
   const [party] = await db.select().from(parties).where(eq(parties.id, id));

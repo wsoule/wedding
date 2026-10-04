@@ -21,7 +21,11 @@ export const parties = pgTable("parties", {
   address: text("address"),
   tableNumber: integer("table_number"),
   notes: text("notes"),
+  side: text("side"),
   message: text("message"),
+  // The guest's choice to show their note on the wishes wall; admin can hide it.
+  messagePublic: boolean("message_public").notNull().default(false),
+  messageHidden: boolean("message_hidden").notNull().default(false),
   song: text("song"),
   respondedAt: timestamp("responded_at", { withTimezone: true }),
   ...timestamps,
@@ -58,6 +62,10 @@ export const settings = pgTable("settings", {
   kidMealOptions: text("kid_meal_options").array().notNull().default([]),
   rsvpDeadline: date("rsvp_deadline"),
   notifyEmails: text("notify_emails").array().notNull().default([]),
+  // Up to four photos for the photobooth strip on the home page.
+  heroPhotoIds: uuid("hero_photo_ids").array().notNull().default([]),
+  // "auto" switches to the day-of home page on the wedding date.
+  dayOfMode: text("day_of_mode").notNull().default("auto"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -96,6 +104,38 @@ export const faqs = pgTable("faqs", {
   sortOrder: integer("sort_order").notNull().default(0),
 });
 
+// Every uploaded image: guests' photobooth strips and photos, plus photos the
+// couple adds for the home page, story and wedding party.
+export const photos = pgTable("photos", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  kind: text("kind").notNull(), // "guest" | "site"
+  width: integer("width").notNull(),
+  height: integer("height").notNull(),
+  uploader: text("uploader"),
+  caption: text("caption"),
+  hidden: boolean("hidden").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const storyItems = pgTable("story_items", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  when: text("when").notNull(),
+  title: text("title").notNull(),
+  body: text("body"),
+  photoId: uuid("photo_id").references(() => photos.id, { onDelete: "set null" }),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const weddingParty = pgTable("wedding_party", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull(),
+  role: text("role").notNull(),
+  side: text("side"),
+  blurb: text("blurb"),
+  photoId: uuid("photo_id").references(() => photos.id, { onDelete: "set null" }),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
 export type Party = typeof parties.$inferSelect;
 export type Guest = typeof guests.$inferSelect;
 export type Settings = typeof settings.$inferSelect;
@@ -103,3 +143,6 @@ export type ScheduleItem = typeof scheduleItems.$inferSelect;
 export type Hotel = typeof hotels.$inferSelect;
 export type RegistryLink = typeof registryLinks.$inferSelect;
 export type Faq = typeof faqs.$inferSelect;
+export type Photo = typeof photos.$inferSelect;
+export type StoryItem = typeof storyItems.$inferSelect;
+export type WeddingPartyMember = typeof weddingParty.$inferSelect;

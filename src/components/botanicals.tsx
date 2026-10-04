@@ -1,186 +1,185 @@
-// Hand-drawn botanicals. Stems and leaves share one leaf shape (see Leaf) and
-// the placement helpers in vine-geometry.
+// Fine-line botanicals in a pen-and-wash style: thin ink outlines with a soft
+// watercolor fill underneath. With `animate`, the ink draws itself in (.draw)
+// and the wash fades up afterwards (.wash); timing comes from the --at variable.
 
+import type { CSSProperties } from "react";
 import { curve as rounded, heading, leavesAlong, stemPath, type LeafSpot } from "./vine-geometry";
 
-type Props = { className?: string };
+const INK = "var(--color-fern-dark)";
+const at = (s: number) => ({ "--at": `${s.toFixed(2)}s` }) as CSSProperties;
 
-// Animation timing, in seconds from page load. Leave `delay` undefined for a
-// still drawing. See the "Botanical motion" section of globals.css.
-type Motion = { delay?: number };
-const at = (seconds: number) => ({ animationDelay: `${seconds.toFixed(2)}s` });
+type Anim = { animate?: boolean; delay?: number };
+const drawProps = ({ animate, delay = 0 }: Anim) =>
+  animate ? { pathLength: 1, className: "draw", style: at(delay) } : {};
+const washProps = ({ animate, delay = 0 }: Anim) => (animate ? { className: "wash", style: at(delay + 1) } : {});
 
-// A pointed leaf with a short stalk and a center vein, drawn pointing right
-// from its base at (0, 0). `size` is roughly its length. With a delay it
-// unfurls, then sways; the two animations sit on separate groups so one
-// doesn't overwrite the other's transform.
-export function Leaf({ spot, fill, vein = "var(--color-paper)", delay, i = 0 }: { spot: LeafSpot; fill: string; vein?: string; i?: number } & Motion) {
-  const shape = (
-    <g transform={`scale(${spot.size / 18})`}>
-      <LeafShape fill={fill} vein={vein} />
-    </g>
-  );
-  return (
-    <g transform={`translate(${spot.x} ${spot.y}) rotate(${spot.angle})`}>
-      {delay === undefined ? (
-        shape
-      ) : (
-        <g className="leaf-grow" style={at(delay)}>
-          <g className="sway" style={{ ...at(delay + 0.7), animationDuration: `${3 + (i % 4) * 0.55}s` }}>
-            {shape}
-          </g>
-        </g>
-      )}
-    </g>
-  );
-}
+const LEAF = "M2.5 0 C 5 -5.6, 11.5 -7, 18 0 C 11.5 5.2, 5 4.6, 2.5 0 Z";
 
-export function LeafShape({ fill, vein = "var(--color-paper)" }: { fill: string; vein?: string }) {
+// One leaf pointing right from its base at (0, 0), about 18 units long.
+export function LeafShape({ fill = "var(--color-sage)", ...anim }: { fill?: string } & Anim) {
   return (
     <>
-      <path d="M0 0 L3 0" stroke={fill} strokeWidth="1.4" strokeLinecap="round" />
-      <path d="M2.5 0 C 5 -5.6, 11.5 -7, 18 0 C 11.5 5.2, 5 4.6, 2.5 0 Z" fill={fill} />
-      <path d="M3.5 0 Q 10 -0.9 16 -0.2" fill="none" stroke={vein} strokeOpacity="0.55" strokeWidth="0.8" strokeLinecap="round" />
+      <path d={LEAF} fill={fill} fillOpacity="0.35" stroke="none" {...washProps(anim)} />
+      <path d={LEAF} fill="none" stroke={INK} strokeWidth="0.7" strokeLinejoin="round" {...drawProps(anim)} />
+      <path d="M0 0 L 15 -0.4" fill="none" stroke={INK} strokeWidth="0.55" strokeLinecap="round" {...drawProps({ ...anim, delay: (anim.delay ?? 0) + 0.15 })} />
     </>
   );
 }
 
-// A small curl coming off the stem.
-export function Tendril({ x, y, angle, side, color, delay }: { x: number; y: number; angle: number; side: 1 | -1; color: string } & Motion) {
+export function Leaf({ spot, fill, ...anim }: { spot: LeafSpot; fill?: string } & Anim) {
+  return (
+    <g transform={`translate(${spot.x} ${spot.y}) rotate(${spot.angle}) scale(${spot.size / 18})`}>
+      <LeafShape fill={fill} {...anim} />
+    </g>
+  );
+}
+
+export function Tendril({ x, y, angle, side, ...anim }: { x: number; y: number; angle: number; side: 1 | -1; color?: string } & Anim) {
   return (
     <path
       d="M0 0 C 3 -1, 7 -5, 6 -9 C 5.4 -11.5, 2.4 -11.2, 2.6 -8.6"
       transform={`translate(${x} ${y}) rotate(${angle}) scale(1 ${-side})`}
-      pathLength={1}
-      className={delay === undefined ? undefined : "stem-draw"}
-      style={delay === undefined ? undefined : { ...at(delay), animationDuration: "0.8s" }}
       fill="none"
-      stroke={color}
-      strokeWidth="1"
+      stroke={INK}
+      strokeWidth="0.6"
       strokeLinecap="round"
+      {...drawProps(anim)}
     />
   );
 }
 
-export function Fern({ className }: Props) {
-  const leaves = Array.from({ length: 9 }, (_, i) => i);
+// A five-petal wildflower centered on (x, y).
+export function BloomShape({
+  x,
+  y,
+  scale = 1,
+  petal = "var(--color-foxglove)",
+  center = "var(--color-buttercup)",
+  ...anim
+}: { x: number; y: number; scale?: number; petal?: string; center?: string } & Anim) {
+  const P = "M20 20 C 13 14, 14 3, 20 2 C 26 3, 27 14, 20 20 Z";
   return (
-    <svg viewBox="0 0 120 260" fill="none" className={className} aria-hidden="true">
-      <path d="M60 255 C 58 190, 62 120, 60 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      {leaves.map((i) => {
-        const y = 230 - i * 24;
-        const len = 46 - i * 4;
-        return (
-          <g key={i} stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
-            <path d={`M60 ${y} C ${60 - len * 0.5} ${y - 6}, ${60 - len * 0.9} ${y - 16}, ${60 - len} ${y - 22} C ${60 - len * 0.7} ${y - 8}, ${60 - len * 0.35} ${y - 2}, 60 ${y}`} fill="currentColor" fillOpacity="0.12" />
-            <path d={`M60 ${y - 6} C ${60 + len * 0.5} ${y - 12}, ${60 + len * 0.9} ${y - 22}, ${60 + len} ${y - 28} C ${60 + len * 0.7} ${y - 14}, ${60 + len * 0.35} ${y - 8}, 60 ${y - 6}`} fill="currentColor" fillOpacity="0.12" />
-          </g>
-        );
-      })}
-    </svg>
-  );
-}
-
-// A small divider sprig: a gently bowed stem with leaves and a bud at the tip.
-const sprigCurve = rounded((t) => ({
-  x: 8 + 150 * t,
-  y: 58 - 30 * t - 14 * Math.sin(Math.PI * t),
-}));
-
-// Animated by default; wrap in <GrowInView> so it grows when scrolled to.
-export function Sprig({ className, animate = true }: Props & { animate?: boolean }) {
-  const leaves = leavesAlong(sprigCurve, 9, { start: 0.08, end: 0.86, sizeFrom: 26, sizeTo: 15, spread: 52 });
-  const tip = sprigCurve(1);
-  const d = (t: number) => (animate ? 0.1 + t * 1.0 : undefined);
-  return (
-    <svg viewBox="0 0 170 70" className={className} aria-hidden="true">
-      <path
-        d={stemPath(sprigCurve)}
-        pathLength={1}
-        className={animate ? "stem-draw" : undefined}
-        style={animate ? { animationDuration: "1.1s" } : undefined}
-        fill="none"
-        stroke="var(--color-fern-dark)"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      {leaves.map((l, i) => (
-        <Leaf key={i} i={i} spot={l} delay={d(l.t)} fill={i % 3 === 1 ? "var(--color-sage)" : "var(--color-fern)"} />
-      ))}
-      <BloomShape x={tip.x} y={tip.y} scale={0.36} delay={d(1.05)} petal="var(--color-foxglove)" center="var(--color-buttercup)" />
-    </svg>
-  );
-}
-
-// A bloom drawn inside another SVG, centered on (x, y).
-export function BloomShape({ x, y, scale = 1, petal, center, delay }: { x: number; y: number; scale?: number; petal: string; center: string } & Motion) {
-  const flower = (
     <g transform={`translate(${x - 20 * scale} ${y - 20 * scale}) scale(${scale})`}>
       {[0, 72, 144, 216, 288].map((r) => (
-        <path key={r} d="M20 20 C 13 14, 14 3, 20 2 C 26 3, 27 14, 20 20 Z" fill={petal} transform={`rotate(${r} 20 20)`} />
+        <g key={r} transform={`rotate(${r} 20 20)`}>
+          <path d={P} fill={petal} fillOpacity="0.55" {...washProps(anim)} />
+          <path d={P} fill="none" stroke="var(--color-foxglove-dark)" strokeWidth={0.8 / Math.max(scale, 0.4)} {...drawProps(anim)} />
+        </g>
       ))}
-      {[36, 108, 180, 252, 324].map((r) => (
-        <path key={r} d="M20 20 L20 9" stroke={center} strokeOpacity="0.5" strokeWidth="0.8" transform={`rotate(${r - 36} 20 20)`} />
-      ))}
-      <circle cx="20" cy="20" r="4.5" fill={center} />
-    </g>
-  );
-  if (delay === undefined) return flower;
-  return (
-    <g className="bloom-open" style={at(delay)}>
-      {flower}
+      <circle cx="20" cy="20" r="3.6" fill={center} {...washProps(anim)} />
     </g>
   );
 }
 
-// Two vines climbing from the bottom corners. On load the stems draw up, leaves
-// unfurl as the stem passes them, and the flowers open last. and meeting under a flower at the top.
-const arcLeft = rounded((t) => {
-  const a = Math.PI - t * (Math.PI / 2 - 0.08);
-  return { x: 150 + Math.cos(a) * 128, y: 178 - Math.sin(a) * 152 };
-});
-const arcRight = rounded((t) => {
-  const p = arcLeft(t);
-  return { x: 300 - p.x, y: p.y };
-});
+// A long, gently curving stem with leaves and a flower or two: tucked behind
+// the photobooth strip and used as ornaments.
+const sprayCurve = rounded((t) => ({ x: 6 + 150 * t, y: 150 - 140 * t + 22 * Math.sin(Math.PI * t) }));
 
-export function Arch({ className }: Props) {
-  const sides = [arcLeft, arcRight].map((curve, s) => ({
-    curve,
-    leaves: leavesAlong(curve, 13, { start: 0.04, end: 0.9, sizeFrom: 22, sizeTo: 12, spread: 46, firstSide: s === 0 ? 1 : -1 }),
-  }));
-  // Matches the 1.6s stem draw: something at t along the stem appears as the stem reaches it.
-  const grow = (t: number) => 0.1 + t * 1.5;
-  const buttercup = { petal: "var(--color-buttercup)", center: "var(--color-fern-dark)" };
-  const foxglove = { petal: "var(--color-foxglove)", center: "var(--color-buttercup)" };
-  // Mirror the positions but swap the colors so the two sides aren't identical.
-  const blooms = [
-    [{ t: 0.36, scale: 0.5, ...buttercup }, { t: 0.68, scale: 0.42, ...foxglove }],
-    [{ t: 0.36, scale: 0.5, ...foxglove }, { t: 0.68, scale: 0.42, ...buttercup }],
-  ];
-
+export function Spray({ className, flip = false, animate = false, delay = 0 }: { className?: string; flip?: boolean } & Anim) {
+  const leaves = leavesAlong(sprayCurve, 12, { start: 0.06, end: 0.86, sizeFrom: 30, sizeTo: 16, spread: 48 });
+  const tip = sprayCurve(1);
+  const side = sprayCurve(0.55);
+  const d = (t: number) => delay + t * 1.6;
   return (
-    <svg viewBox="0 0 300 190" fill="none" className={className} aria-hidden="true">
-      {sides.map(({ curve, leaves }, s) => (
-        <g key={s}>
-          <path d={stemPath(curve)} pathLength={1} className="stem-draw" style={at(0.1)} stroke="var(--color-fern-dark)" strokeWidth="1.5" strokeLinecap="round" />
-          {[0.2, 0.52, 0.8].map((t, i) => {
-            const p = curve(t);
-            const side = (i % 2 === 0 ? -1 : 1) * (s === 0 ? 1 : -1);
-            return <Tendril key={t} x={p.x} y={p.y} delay={grow(t) + 0.2} angle={heading(curve, t)} side={side as 1 | -1} color="var(--color-fern)" />;
-          })}
-          {leaves.map((l, i) => (
-            <Leaf key={i} i={i + s} spot={l} delay={grow(l.t)} fill={i % 3 === 2 ? "var(--color-sage)" : i % 3 === 1 ? "var(--color-fern-dark)" : "var(--color-fern)"} />
-          ))}
-          {blooms[s].map((b) => {
-            const p = curve(b.t);
-            return <BloomShape key={b.t} x={p.x} y={p.y} delay={grow(b.t) + 0.5} scale={b.scale} petal={b.petal} center={b.center} />;
-          })}
-        </g>
+    <svg viewBox="0 0 170 170" className={className} style={flip ? { transform: "scaleX(-1)" } : undefined} aria-hidden="true">
+      <path d={stemPath(sprayCurve)} fill="none" stroke={INK} strokeWidth="0.9" strokeLinecap="round" {...drawProps({ animate, delay })} />
+      {[0.3, 0.7].map((t, i) => (
+        <Tendril key={t} x={sprayCurve(t).x} y={sprayCurve(t).y} angle={heading(sprayCurve, t)} side={i ? 1 : -1} animate={animate} delay={d(t)} />
       ))}
-      <BloomShape x={128} y={30} delay={1.7} scale={0.45} petal="var(--color-buttercup)" center="var(--color-fern-dark)" />
-      <BloomShape x={172} y={30} delay={1.8} scale={0.45} petal="var(--color-buttercup)" center="var(--color-fern-dark)" />
-      <BloomShape x={150} y={22} delay={1.95} scale={0.95} petal="var(--color-foxglove)" center="var(--color-buttercup)" />
+      {leaves.map((l, i) => (
+        <Leaf key={i} spot={l} fill={i % 3 === 1 ? "var(--color-fern)" : "var(--color-sage)"} animate={animate} delay={d(l.t)} />
+      ))}
+      <BloomShape x={side.x + 14} y={side.y + 4} scale={0.55} petal="var(--color-buttercup)" center="var(--color-fern)" animate={animate} delay={d(0.6)} />
+      <BloomShape x={tip.x} y={tip.y} scale={0.75} animate={animate} delay={d(1)} />
     </svg>
+  );
+}
+
+// A small horizontal sprig for dividers and page headers.
+const sprigCurve = rounded((t) => ({ x: 8 + 150 * t, y: 40 - 10 * t - 12 * Math.sin(Math.PI * t) }));
+
+export function Sprig({ className, animate = false, delay = 0 }: { className?: string } & Anim) {
+  const leaves = leavesAlong(sprigCurve, 9, { start: 0.08, end: 0.86, sizeFrom: 22, sizeTo: 13, spread: 52 });
+  const tip = sprigCurve(1);
+  return (
+    <svg viewBox="0 0 172 56" className={className} aria-hidden="true">
+      <path d={stemPath(sprigCurve)} fill="none" stroke={INK} strokeWidth="0.8" strokeLinecap="round" {...drawProps({ animate, delay })} />
+      {leaves.map((l, i) => (
+        <Leaf key={i} spot={l} fill={i % 3 === 1 ? "var(--color-fern)" : "var(--color-sage)"} animate={animate} delay={delay + l.t * 1.2} />
+      ))}
+      <BloomShape x={tip.x + 2} y={tip.y} scale={0.38} animate={animate} delay={delay + 1.2} />
+    </svg>
+  );
+}
+
+// Line drawings for empty photobooth frames, so the strip looks finished
+// before real photos are uploaded.
+export function FrameArt({ variant, animate = false, delay = 0 }: { variant: number } & Anim) {
+  const v = variant % 4;
+  return (
+    <svg viewBox="0 0 120 90" className="h-full w-full" aria-hidden="true">
+      <rect width="120" height="90" fill="var(--color-paper-deep)" />
+      {v === 0 && (
+        <g transform="translate(34 4) scale(0.48)">
+          <SprayArt animate={animate} delay={delay} />
+        </g>
+      )}
+      {v === 1 && (
+        <>
+          <BloomShape x={48} y={42} scale={0.9} animate={animate} delay={delay} />
+          <BloomShape x={78} y={54} scale={0.55} petal="var(--color-buttercup)" center="var(--color-fern)" animate={animate} delay={delay + 0.3} />
+        </>
+      )}
+      {v === 2 && (
+        <text
+          x="60"
+          y="57"
+          textAnchor="middle"
+          fontFamily="var(--font-serif)"
+          fontStyle="italic"
+          fontSize="34"
+          fill="var(--color-fern-dark)"
+          className={animate ? "wash" : undefined}
+          style={animate ? at(delay) : undefined}
+        >
+          J&amp;W
+        </text>
+      )}
+      {v === 3 && (
+        <g transform="translate(16 26) scale(0.52)">
+          <SprigArt animate={animate} delay={delay} />
+        </g>
+      )}
+    </svg>
+  );
+}
+
+// The spray and sprig drawings without their own <svg>, for nesting.
+function SprayArt(anim: Anim) {
+  const leaves = leavesAlong(sprayCurve, 12, { start: 0.06, end: 0.86, sizeFrom: 30, sizeTo: 16, spread: 48 });
+  const tip = sprayCurve(1);
+  const d = (t: number) => (anim.delay ?? 0) + t * 1.2;
+  return (
+    <>
+      <path d={stemPath(sprayCurve)} fill="none" stroke={INK} strokeWidth="1.4" strokeLinecap="round" {...drawProps(anim)} />
+      {leaves.map((l, i) => (
+        <Leaf key={i} spot={l} fill={i % 3 === 1 ? "var(--color-fern)" : "var(--color-sage)"} animate={anim.animate} delay={d(l.t)} />
+      ))}
+      <BloomShape x={tip.x} y={tip.y} scale={0.75} animate={anim.animate} delay={d(1)} />
+    </>
+  );
+}
+
+function SprigArt(anim: Anim) {
+  const leaves = leavesAlong(sprigCurve, 9, { start: 0.08, end: 0.86, sizeFrom: 22, sizeTo: 13, spread: 52 });
+  const tip = sprigCurve(1);
+  return (
+    <>
+      <path d={stemPath(sprigCurve)} fill="none" stroke={INK} strokeWidth="1.3" strokeLinecap="round" {...drawProps(anim)} />
+      {leaves.map((l, i) => (
+        <Leaf key={i} spot={l} fill={i % 3 === 1 ? "var(--color-fern)" : "var(--color-sage)"} animate={anim.animate} delay={(anim.delay ?? 0) + l.t} />
+      ))}
+      <BloomShape x={tip.x + 2} y={tip.y} scale={0.38} animate={anim.animate} delay={(anim.delay ?? 0) + 1} />
+    </>
   );
 }

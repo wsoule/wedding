@@ -1,15 +1,24 @@
+import type { CSSProperties } from "react";
 import { Sprig } from "./botanicals";
+
+const at = (s: number) => ({ "--at": `${s}s` }) as CSSProperties;
 
 export function PageHeader({ title, intro }: { title: string; intro?: string }) {
   return (
-    <header className="relative pt-16 pb-6">
-      <Sprig className="absolute top-3 right-0 w-28 opacity-85" />
-      <h1 className="text-[2.5rem]">{title}</h1>
-      {intro && <p className="mt-2 max-w-[28ch] text-moss-soft">{intro}</p>}
+    <header className="pt-10 pb-8 text-center">
+      <Sprig animate className="mx-auto mb-3 w-28" />
+      <h1 className="rise text-[2.9rem]" style={at(0.2)}>
+        {title}
+      </h1>
+      {intro && (
+        <p className="rise mx-auto mt-3 max-w-[30ch] text-moss-soft" style={at(0.35)}>
+          {intro}
+        </p>
+      )}
     </header>
   );
 }
 
 export function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <h2 className="mt-12 mb-4 text-2xl text-fern-dark">{children}</h2>;
+  return <h2 className="mt-14 mb-5 text-center text-[2rem] text-fern-dark">{children}</h2>;
 }

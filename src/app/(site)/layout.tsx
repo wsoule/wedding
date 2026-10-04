@@ -1,14 +1,17 @@
-import { BottomNav } from "@/components/bottom-nav";
-import { Fern } from "@/components/botanicals";
+import { connection } from "next/server";
+import { SiteHeader } from "@/components/site-header";
+import { getSettings, isDayOf } from "@/lib/data";
 
-export default function SiteLayout({ children }: { children: React.ReactNode }) {
+export default async function SiteLayout({ children }: { children: React.ReactNode }) {
+  await connection();
+  const dayOf = isDayOf(await getSettings());
   return (
     <>
-      {/* Margin ferns for wide screens; the site itself stays phone-width. */}
-      <Fern className="pointer-events-none fixed bottom-0 left-[max(1rem,calc(50%-34rem))] hidden h-[70vh] text-sage/70 lg:block" />
-      <Fern className="pointer-events-none fixed bottom-0 right-[max(1rem,calc(50%-34rem))] hidden h-[70vh] -scale-x-100 text-sage/70 lg:block" />
-      <main className="relative mx-auto max-w-[34rem] px-5 pb-32">{children}</main>
-      <BottomNav />
+      <SiteHeader dayOf={dayOf} />
+      <main className="relative mx-auto max-w-[36rem] overflow-x-clip px-5 pb-24">{children}</main>
+      <footer className="pb-[max(2rem,env(safe-area-inset-bottom))] text-center font-serif text-lg italic text-moss-soft">
+        Jaden &amp; Wyat, May 22, 2027
+      </footer>
     </>
   );
 }
