@@ -20,8 +20,7 @@ export function SiteHeader({ dayOf }: { dayOf: boolean }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  // Close the menu after navigating, and stop the page scrolling behind it.
-  useEffect(() => setOpen(false), [pathname]);
+  // Stop the page scrolling behind the open menu.
   useEffect(() => {
     document.documentElement.style.overflow = open ? "hidden" : "";
   }, [open]);
@@ -35,11 +34,11 @@ export function SiteHeader({ dayOf }: { dayOf: boolean }) {
         style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
         <div className="mx-auto flex h-14 max-w-[36rem] items-center justify-between px-5">
-          <Link href="/" className="font-serif text-2xl italic leading-none text-fern-dark" aria-label="Jaden & Wyat, home">
+          <Link href="/" onClick={() => setOpen(false)} className="font-serif text-2xl italic leading-none text-fern-dark" aria-label="Jaden & Wyat, home">
             J&amp;W
           </Link>
           <div className="flex items-center gap-2">
-            <Link href={dayOf ? "/today" : "/rsvp"} className="rounded-full bg-fern-dark px-4 py-1.5 text-sm font-medium text-print">
+            <Link href={dayOf ? "/today" : "/rsvp"} onClick={() => setOpen(false)} className="rounded-full bg-fern-dark px-4 py-1.5 text-sm font-medium text-print">
               {dayOf ? "Today" : "RSVP"}
             </Link>
             <button
@@ -76,6 +75,7 @@ export function SiteHeader({ dayOf }: { dayOf: boolean }) {
                 >
                   <Link
                     href={l.href}
+                    onClick={() => setOpen(false)}
                     aria-current={active ? "page" : undefined}
                     className={`flex items-baseline justify-between py-3 font-serif text-[1.9rem] leading-tight ${active ? "italic text-foxglove-dark" : "text-moss"}`}
                   >
@@ -85,7 +85,7 @@ export function SiteHeader({ dayOf }: { dayOf: boolean }) {
               );
             })}
           </ul>
-          <Link href="/rsvp" className="btn btn-primary mt-8 w-full">
+          <Link href="/rsvp" onClick={() => setOpen(false)} className="btn btn-primary mt-8 w-full">
             RSVP
           </Link>
         </nav>
