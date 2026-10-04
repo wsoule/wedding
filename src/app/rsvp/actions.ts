@@ -1,34 +1,54 @@
 "use server";
 
+// Every export here can be called directly by anyone, so nothing returns a
+// party's details without the last-name check, and nothing saves without the
+// signed pass that check hands out.
+
 import { eq } from "drizzle-orm";
 import { after } from "next/server";
 import { db } from "@/db/client";
 import { guests, parties } from "@/db/schema";
+import { clientIp } from "@/lib/client-ip";
 import { getParty, getSettings } from "@/lib/data";
 import { sendEmail } from "@/lib/email";
-import { guestName, matchesQuery, normalize, partyLabel } from "@/lib/names";
+import { guestName, lastNameMatches, matchesFirstName, needsLastName, normalize, shortLabel } from "@/lib/names";
+import { createLimiter } from "@/lib/rate-limit";
 import { isRsvpOpen, validateRsvp } from "@/lib/rsvp";
+import { createPartyPass, verifyPartyPass } from "@/lib/session";
 
-export type PartyMatch = { id: string; label: string; names: string };
+export type PartyMatch = { id: string; label: string; needsLastName: boolean };
 
 export async function searchParties(query: string): Promise<PartyMatch[]> {
-  if (normalize(query).replace(/ /g, "").length < 3) return [];
-  const [all, ps] = await Promise.all([db.select().from(guests), db.select({ id: parties.id, name: parties.name }).from(parties)]);
-  const partyIds = [...new Set(all.filter((g) => matchesQuery(g, query)).map((g) => g.partyId))].slice(0, 6);
+  if (normalize(query).replace(/ /g, "").length < 2) return [];
+  const all = await db.select().from(guests);
+  const partyIds = [...new Set(all.filter((g) => matchesFirstName(g, query)).map((g) => g.partyId))].slice(0, 8);
   return partyIds.map((id) => {
     const members = all.filter((g) => g.partyId === id).sort((a, b) => a.sortOrder - b.sortOrder);
-    return {
-      id,
-      label: ps.find((p) => p.id === id)?.name || partyLabel(members),
-      names: members.filter((g) => !g.isPlaceholder || g.firstName).map(guestName).join(", "),
-    };
+    return { id, label: shortLabel(members), needsLastName: needsLastName(members) };
   });
 }
 
-export async function loadParty(id: string) {
-  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
-  const [party, settings] = await Promise.all([getParty(id), getSettings()]);
-  if (!party) return null;
+// 15 wrong last names per IP per 15 minutes.
+const unlockLimiter = createLimiter({ max: 15, windowMs: 15 * 60_000 });
+const isId = (id: string) => /^[0-9a-f-]{36}$/i.test(id);
+
+export async function unlockParty(
+  id: string,
+  lastName: string,
+): Promise<{ ok: true; party: LoadedParty; pass: string } | { ok: false; error: string }> {
+  const ip = await clientIp();
+  if (unlockLimiter.blocked(ip)) return { ok: false, error: "Too many tries. Wait a few minutes and try again." };
+  const party = isId(id) ? await getParty(id) : null;
+  if (!party) return { ok: false, error: "We couldn't open that invitation. Search for your name again." };
+  if (needsLastName(party.guests) && !lastNameMatches(party.guests, lastName)) {
+    unlockLimiter.fail(ip);
+    return { ok: false, error: "That last name doesn't match this invitation. Use the last name on your invitation." };
+  }
+  return { ok: true, party: await toLoaded(party), pass: createPartyPass(party.id) };
+}
+
+async function toLoaded(party: NonNullable<Awaited<ReturnType<typeof getParty>>>) {
+  const settings = await getSettings();
   return {
     id: party.id,
     message: party.message,
@@ -53,12 +73,19 @@ export async function loadParty(id: string) {
   };
 }
 
-export type LoadedParty = NonNullable<Awaited<ReturnType<typeof loadParty>>>;
+export type LoadedParty = Awaited<ReturnType<typeof toLoaded>>;
 
-export async function submitRsvp(partyId: string, input: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function submitRsvp(
+  partyId: string,
+  pass: string,
+  input: unknown,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!isId(partyId) || !verifyPartyPass(partyId, pass)) {
+    return { ok: false, error: "Your session expired. Search for your name again." };
+  }
   const [party, settings] = await Promise.all([getParty(partyId), getSettings()]);
   if (!party) return { ok: false, error: "We couldn't find your invitation. Search for your name again." };
-  if (!isRsvpOpen(settings.rsvpDeadline)) return { ok: false, error: "RSVPs are closed. Reach out to Wyat or Jaden directly." };
+  if (!isRsvpOpen(settings.rsvpDeadline)) return { ok: false, error: "RSVPs are closed. Reach out to Jaden or Wyat directly." };
 
   const result = validateRsvp(party.guests, input, settings);
   if (!result.ok) return result;

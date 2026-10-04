@@ -11,7 +11,7 @@ export default async function FaqPage() {
 
   return (
     <>
-      <PageHeader title="Questions" intro="Still wondering about something? Ask Wyat or Jaden." />
+      <PageHeader title="Questions" intro="Still wondering about something? Ask Jaden or Wyat." />
       <div className="divide-y divide-lichen border-y border-lichen">
         {faqs.map((f) => (
           <details key={f.id} className="group py-1">

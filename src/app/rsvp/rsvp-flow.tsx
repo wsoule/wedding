@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { calendarUrl, site } from "@/content/site";
-import { loadParty, searchParties, submitRsvp, type LoadedParty, type PartyMatch } from "./actions";
+import { searchParties, submitRsvp, unlockParty, type LoadedParty, type PartyMatch } from "./actions";
 import { Vine } from "./vine";
 
 type Step = "find" | "hello" | "who" | "food" | "note" | "review" | "done";
@@ -21,6 +21,7 @@ type Answer = {
 export function RsvpFlow({ deadlineLabel }: { deadlineLabel: string | null }) {
   const [step, setStep] = useState<Step>("find");
   const [party, setParty] = useState<LoadedParty | null>(null);
+  const [pass, setPass] = useState("");
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [message, setMessage] = useState("");
   const [song, setSong] = useState("");
@@ -34,25 +35,31 @@ export function RsvpFlow({ deadlineLabel }: { deadlineLabel: string | null }) {
     top.current?.scrollIntoView({ block: "start" });
   };
 
-  function choose(id: string) {
-    startTransition(async () => {
-      const p = await loadParty(id);
-      if (!p) return setError("We couldn't open that invitation. Try searching again.");
-      setParty(p);
-      setAnswers(
-        p.guests.map((g) => ({
-          id: g.id,
-          attending: g.attending,
-          firstName: g.isPlaceholder ? g.firstName : "",
-          lastName: g.isPlaceholder ? g.lastName : "",
-          meal: g.meal ?? "",
-          dietary: g.dietary ?? "",
-        })),
-      );
-      setMessage(p.message ?? "");
-      setSong(p.song ?? "");
-      go("hello");
-    });
+  // Resolves to an error message, or null once the invitation is open.
+  function unlock(id: string, lastName: string) {
+    return new Promise<string | null>((resolve) =>
+      startTransition(async () => {
+        const res = await unlockParty(id, lastName);
+        if (!res.ok) return resolve(res.error);
+        const p = res.party;
+        setPass(res.pass);
+        setParty(p);
+        setAnswers(
+          p.guests.map((g) => ({
+            id: g.id,
+            attending: g.attending,
+            firstName: g.isPlaceholder ? g.firstName : "",
+            lastName: g.isPlaceholder ? g.lastName : "",
+            meal: g.meal ?? "",
+            dietary: g.dietary ?? "",
+          })),
+        );
+        setMessage(p.message ?? "");
+        setSong(p.song ?? "");
+        go("hello");
+        resolve(null);
+      }),
+    );
   }
 
   const update = (id: string, patch: Partial<Answer>) =>
@@ -64,7 +71,7 @@ export function RsvpFlow({ deadlineLabel }: { deadlineLabel: string | null }) {
   function send() {
     if (!party) return;
     startTransition(async () => {
-      const res = await submitRsvp(party.id, {
+      const res = await submitRsvp(party.id, pass, {
         guests: answers.map((a) => ({
           id: a.id,
           attending: !!a.attending,
@@ -96,7 +103,7 @@ export function RsvpFlow({ deadlineLabel }: { deadlineLabel: string | null }) {
       </header>
 
       <div key={step} className="flex flex-1 flex-col pt-8 motion-safe:animate-[rise_350ms_ease-out]">
-        {step === "find" && <Find onChoose={choose} pending={pending} deadlineLabel={deadlineLabel} />}
+        {step === "find" && <Find onUnlock={unlock} pending={pending} deadlineLabel={deadlineLabel} />}
 
         {step === "hello" && party && (
           <Hello
@@ -300,12 +307,23 @@ export function RsvpFlow({ deadlineLabel }: { deadlineLabel: string | null }) {
   );
 }
 
-function Find({ onChoose, pending, deadlineLabel }: { onChoose: (id: string) => void; pending: boolean; deadlineLabel: string | null }) {
+function Find({
+  onUnlock,
+  pending,
+  deadlineLabel,
+}: {
+  onUnlock: (id: string, lastName: string) => Promise<string | null>;
+  pending: boolean;
+  deadlineLabel: string | null;
+}) {
   const [q, setQ] = useState("");
   const [found, setFound] = useState<PartyMatch[] | null>(null);
+  const [picked, setPicked] = useState<PartyMatch | null>(null);
+  const [lastName, setLastName] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const latest = useRef(0);
   const query = q.trim();
-  const ready = query.replace(/\s/g, "").length >= 3;
+  const ready = query.replace(/\s/g, "").length >= 2;
   // Keep showing the last results while the next search is in flight.
   const results = ready ? found : null;
 
@@ -319,31 +337,96 @@ function Find({ onChoose, pending, deadlineLabel }: { onChoose: (id: string) => 
     return () => clearTimeout(t);
   }, [query, ready]);
 
+  async function pick(match: PartyMatch) {
+    setError(null);
+    if (!match.needsLastName) {
+      setError(await onUnlock(match.id, ""));
+      return;
+    }
+    setPicked(match);
+  }
+
+  async function confirm(e: React.FormEvent) {
+    e.preventDefault();
+    if (!picked) return;
+    setError(await onUnlock(picked.id, lastName));
+  }
+
+  if (picked) {
+    return (
+      <form onSubmit={confirm} className="flex flex-1 flex-col">
+        <h1 className="text-[2.1rem]">Just to check</h1>
+        <p className="mt-2 text-moss-soft">
+          What&rsquo;s the last name on the invitation for <span className="font-medium text-moss">{picked.label}</span>?
+        </p>
+        <input
+          className="field mt-6 text-lg"
+          autoComplete="family-name"
+          autoCapitalize="words"
+          spellCheck={false}
+          placeholder="Last name"
+          aria-label="Last name"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          autoFocus
+        />
+        <p className="mt-2 text-sm text-moss-soft">This keeps your RSVP private to you.</p>
+        {error && (
+          <p role="alert" className="mt-4 rounded-xl bg-foxglove/15 px-4 py-3 text-foxglove-dark">
+            {error}
+          </p>
+        )}
+        <div className="flex-1" />
+        <div className="sticky bottom-0 -mx-5 mt-6 flex gap-3 bg-gradient-to-t from-paper from-70% to-transparent px-5 pt-6 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+          <button
+            type="button"
+            className="btn btn-quiet shrink-0"
+            onClick={() => {
+              setPicked(null);
+              setLastName("");
+              setError(null);
+            }}
+          >
+            Not you?
+          </button>
+          <button className="btn btn-primary flex-1 text-lg" disabled={pending || !lastName.trim()}>
+            {pending ? "Checking…" : "Continue"}
+          </button>
+        </div>
+      </form>
+    );
+  }
+
   return (
     <div>
       <h1 className="text-[2.1rem]">Find your invitation</h1>
       <p className="mt-2 text-moss-soft">
-        Type your first or last name.
+        Type your first name.
         {deadlineLabel && <> Please reply by {deadlineLabel}.</>}
       </p>
       <input
         className="field mt-6 text-lg"
         type="search"
         inputMode="search"
-        autoComplete="off"
+        autoComplete="given-name"
         autoCorrect="off"
         autoCapitalize="words"
         spellCheck={false}
-        placeholder="Your name"
-        aria-label="Your name"
+        placeholder="First name"
+        aria-label="First name"
         value={q}
         onChange={(e) => setQ(e.target.value)}
         autoFocus
       />
       <div aria-live="polite" className="mt-4">
+        {error && (
+          <p role="alert" className="mb-3 rounded-xl bg-foxglove/15 px-4 py-3 text-foxglove-dark">
+            {error}
+          </p>
+        )}
         {results && results.length === 0 && (
           <p className="rounded-2xl bg-card p-4 text-moss-soft ring-1 ring-lichen">
-            No match yet. Try the name on your invitation, or just your last name.
+            No match yet. Try the first name on your invitation, or a nickname.
           </p>
         )}
         {results && results.length > 0 && (
@@ -353,13 +436,10 @@ function Find({ onChoose, pending, deadlineLabel }: { onChoose: (id: string) => 
                 <button
                   type="button"
                   disabled={pending}
-                  onClick={() => onChoose(r.id)}
+                  onClick={() => pick(r)}
                   className="flex w-full items-center justify-between gap-3 rounded-2xl bg-card p-4 text-left ring-1 ring-lichen transition active:scale-[0.98] active:bg-paper-deep disabled:opacity-60"
                 >
-                  <span>
-                    <span className="block font-serif text-xl text-fern-dark">{r.label}</span>
-                    <span className="text-sm text-moss-soft">{r.names}</span>
-                  </span>
+                  <span className="font-serif text-xl text-fern-dark">{r.label}</span>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-sage" aria-hidden="true">
                     <path d="m9 6 6 6-6 6" />
                   </svg>

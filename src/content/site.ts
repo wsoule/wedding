@@ -1,7 +1,7 @@
 // Facts that rarely change. Schedule, hotels, registry and FAQ are edited in /admin.
 
 export const site = {
-  couple: ["Wyat", "Jaden"] as const,
+  couple: ["Jaden", "Wyat"] as const,
   // Local wedding day, Eastern time.
   date: "2027-05-22",
   dateLabel: "Saturday, May 22, 2027",

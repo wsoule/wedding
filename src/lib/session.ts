@@ -32,3 +32,19 @@ export function passwordMatches(attempt: string): boolean {
   // Compare HMACs so lengths always match and timing reveals nothing.
   return timingSafeEqual(Buffer.from(sign(`pw:${attempt}`)), Buffer.from(sign(`pw:${real}`)));
 }
+
+// Proof that a guest confirmed their last name for this party. Valid for a day,
+// long enough to finish (or come back to) an RSVP.
+export function createPartyPass(partyId: string, now = Date.now()) {
+  const expires = String(now + 86_400_000);
+  return `${expires}.${sign(`party:${partyId}:${expires}`)}`;
+}
+
+export function verifyPartyPass(partyId: string, pass: string | undefined, now = Date.now()): boolean {
+  if (!pass) return false;
+  const [expires, mac] = pass.split(".");
+  if (!expires || !mac || Number(expires) < now) return false;
+  const expected = Buffer.from(sign(`party:${partyId}:${expires}`));
+  const given = Buffer.from(mac);
+  return expected.length === given.length && timingSafeEqual(expected, given);
+}

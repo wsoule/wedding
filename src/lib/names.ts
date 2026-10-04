@@ -53,3 +53,39 @@ export function partyLabel(guests: NameFields[]): string {
   if (extras) label += extras === 1 ? " + guest" : ` + ${extras} guests`;
   return label.trim();
 }
+
+// Guest-facing search: first names and nicknames only, so the last name can
+// serve as the check before an invitation opens. Typing a full name works;
+// anything after the first name is ignored.
+export function matchesFirstName(guest: NameFields, query: string): boolean {
+  if (guest.isPlaceholder) return false;
+  const q = normalize(query);
+  if (!q) return false;
+  return [guest.firstName, guest.nickname ?? ""]
+    .map(normalize)
+    .filter(Boolean)
+    .some((name) => name.startsWith(q) || q.startsWith(`${name} `));
+}
+
+const squash = (s: string) => normalize(s).replace(/ /g, "");
+
+export function lastNameMatches(guests: NameFields[], typed: string): boolean {
+  const t = squash(typed);
+  return !!t && guests.some((g) => !g.isPlaceholder && g.lastName && squash(g.lastName) === t);
+}
+
+export function needsLastName(guests: NameFields[]): boolean {
+  return guests.some((g) => !g.isPlaceholder && squash(g.lastName));
+}
+
+// "Jordan S. & Sam L. + guest": enough to pick out your invitation without
+// giving away anyone's last name.
+export function shortLabel(guests: NameFields[]): string {
+  const named = guests
+    .filter((g) => !g.isPlaceholder || g.firstName)
+    .map((g) => (g.lastName.trim() ? `${g.firstName} ${g.lastName.trim()[0].toUpperCase()}.` : g.firstName));
+  const extras = guests.filter((g) => g.isPlaceholder && !g.firstName).length;
+  let label = named.length === 2 ? `${named[0]} & ${named[1]}` : named.join(", ");
+  if (extras) label += extras === 1 ? " + guest" : ` + ${extras} guests`;
+  return label.trim();
+}

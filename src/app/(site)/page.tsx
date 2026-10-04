@@ -18,7 +18,7 @@ export default function Home() {
         <div className="-mt-28 px-6">
           <h1 className="text-[clamp(2.75rem,13vw,3.75rem)] leading-[0.95] text-moss">
             {site.couple[0]}
-            <span className="my-1 block font-sans text-base font-medium tracking-wide text-foxglove-dark">and</span>
+            <span className="-my-1 block text-[0.6em] leading-none text-foxglove-dark">&amp;</span>
             {site.couple[1]}
           </h1>
         </div>

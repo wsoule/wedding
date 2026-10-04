@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { createToken, passwordMatches, verifyToken } from "./session";
+import { createPartyPass, createToken, passwordMatches, verifyPartyPass, verifyToken } from "./session";
 
 beforeAll(() => {
   process.env.SESSION_SECRET = "test-secret-that-is-long-enough";
@@ -25,5 +25,15 @@ describe("passwordMatches", () => {
     expect(passwordMatches("garden")).toBe(true);
     expect(passwordMatches("Garden")).toBe(false);
     expect(passwordMatches("")).toBe(false);
+  });
+});
+
+describe("party passes", () => {
+  it("only work for the party they were made for", () => {
+    const pass = createPartyPass("party-a");
+    expect(verifyPartyPass("party-a", pass)).toBe(true);
+    expect(verifyPartyPass("party-b", pass)).toBe(false);
+    expect(verifyPartyPass("party-a", createPartyPass("party-a", 0))).toBe(false);
+    expect(verifyPartyPass("party-a", undefined)).toBe(false);
   });
 });

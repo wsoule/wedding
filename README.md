@@ -1,4 +1,4 @@
-# Wyat & Jaden wedding site
+# Jaden & Wyat wedding site
 
 A mobile-first wedding site: one QR code on the invitations opens a tap-through
 RSVP, and the rest of the site covers the schedule, venue, travel, registry and

@@ -1,4 +1,4 @@
-# Wyat & Jaden wedding site — design
+# Jaden & Wyat wedding site — design
 
 May 22, 2027 · Little Flower Barn, 565 N. Coldwater Road, Lake Isabella, MI 48893.
 

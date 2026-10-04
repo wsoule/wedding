@@ -1,13 +1,14 @@
 "use server";
 
 import { and, asc, eq, gt, lt, desc, sql } from "drizzle-orm";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { faqs, guests, hotels, parties, registryLinks, scheduleItems, settings } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
 import { parseGuestList, type ImportParty } from "@/lib/import";
+import { clientIp } from "@/lib/client-ip";
 import { createLimiter } from "@/lib/rate-limit";
 import { SESSION_COOKIE, SESSION_DAYS, createToken, passwordMatches } from "@/lib/session";
 import { contentConfig, contentKinds, type ContentKind } from "./content-config";
@@ -23,9 +24,7 @@ const loginLimiter = createLimiter({ max: 10, windowMs: 15 * 60_000 });
 const globalLoginLimiter = createLimiter({ max: 50, windowMs: 15 * 60_000 });
 
 export async function login(_: string | null, form: FormData): Promise<string | null> {
-  // The last X-Forwarded-For entry is the one Railway's proxy appended;
-  // earlier entries come from the client and can be made up.
-  const ip = (await headers()).get("x-forwarded-for")?.split(",").at(-1)?.trim() || "unknown";
+  const ip = await clientIp();
   if (loginLimiter.blocked(ip) || globalLoginLimiter.blocked("all")) {
     return "Too many wrong passwords. Try again in 15 minutes.";
   }
