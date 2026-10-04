@@ -28,8 +28,11 @@ export async function searchParties(query: string): Promise<PartyMatch[]> {
   });
 }
 
-// 15 wrong last names per IP per 15 minutes.
+// 15 wrong last names per IP per 15 minutes, and 10 per invitation per hour so
+// switching IPs doesn't help. There's deliberately no site-wide cap: one
+// person could then lock every guest out of RSVPing.
 const unlockLimiter = createLimiter({ max: 15, windowMs: 15 * 60_000 });
+const partyLimiter = createLimiter({ max: 10, windowMs: 60 * 60_000 });
 const isId = (id: string) => /^[0-9a-f-]{36}$/i.test(id);
 
 export async function unlockParty(
@@ -37,11 +40,14 @@ export async function unlockParty(
   lastName: string,
 ): Promise<{ ok: true; party: LoadedParty; pass: string } | { ok: false; error: string }> {
   const ip = await clientIp();
-  if (unlockLimiter.blocked(ip)) return { ok: false, error: "Too many tries. Wait a few minutes and try again." };
+  if (unlockLimiter.blocked(ip) || partyLimiter.blocked(id)) {
+    return { ok: false, error: "Too many tries. Wait a little while and try again, or ask Jaden or Wyat." };
+  }
   const party = isId(id) ? await getParty(id) : null;
   if (!party) return { ok: false, error: "We couldn't open that invitation. Search for your name again." };
   if (needsLastName(party.guests) && !lastNameMatches(party.guests, lastName)) {
     unlockLimiter.fail(ip);
+    partyLimiter.fail(party.id);
     return { ok: false, error: "That last name doesn't match this invitation. Use the last name on your invitation." };
   }
   return { ok: true, party: await toLoaded(party), pass: createPartyPass(party.id) };

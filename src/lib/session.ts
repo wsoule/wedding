@@ -12,16 +12,18 @@ function secret() {
 
 const sign = (payload: string) => createHmac("sha256", secret()).update(payload).digest("base64url");
 
+// Every signed payload starts with its purpose ("admin:", "party:", "pw:") so
+// a value signed for one use can never verify as another.
 export function createToken(now = Date.now()) {
   const expires = String(now + SESSION_DAYS * 86_400_000);
-  return `${expires}.${sign(expires)}`;
+  return `${expires}.${sign(`admin:${expires}`)}`;
 }
 
 export function verifyToken(token: string | undefined, now = Date.now()): boolean {
   if (!token) return false;
   const [expires, mac] = token.split(".");
   if (!expires || !mac || Number(expires) < now) return false;
-  const expected = Buffer.from(sign(expires));
+  const expected = Buffer.from(sign(`admin:${expires}`));
   const given = Buffer.from(mac);
   return expected.length === given.length && timingSafeEqual(expected, given);
 }

@@ -28,6 +28,14 @@ describe("passwordMatches", () => {
   });
 });
 
+describe("token separation", () => {
+  it("never accepts a party pass as an admin session or the reverse", () => {
+    const pass = createPartyPass("x");
+    expect(verifyToken(pass)).toBe(false);
+    expect(verifyPartyPass("x", createToken())).toBe(false);
+  });
+});
+
 describe("party passes", () => {
   it("only work for the party they were made for", () => {
     const pass = createPartyPass("party-a");
