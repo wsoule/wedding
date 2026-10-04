@@ -1,6 +1,43 @@
-// Hand-drawn line botanicals. They inherit color from `currentColor`.
+// Hand-drawn botanicals. Stems and leaves share one leaf shape (see Leaf) and
+// the placement helpers in vine-geometry.
+
+import { curve as rounded, heading, leavesAlong, stemPath, type LeafSpot } from "./vine-geometry";
 
 type Props = { className?: string };
+
+// A pointed leaf with a short stalk and a center vein, drawn pointing right
+// from its base at (0, 0). `size` is roughly its length.
+export function Leaf({ spot, fill, vein = "var(--color-paper)" }: { spot: LeafSpot; fill: string; vein?: string }) {
+  return (
+    <g transform={`translate(${spot.x} ${spot.y}) rotate(${spot.angle}) scale(${spot.size / 18})`}>
+      <LeafShape fill={fill} vein={vein} />
+    </g>
+  );
+}
+
+export function LeafShape({ fill, vein = "var(--color-paper)" }: { fill: string; vein?: string }) {
+  return (
+    <>
+      <path d="M0 0 L3 0" stroke={fill} strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M2.5 0 C 5 -5.6, 11.5 -7, 18 0 C 11.5 5.2, 5 4.6, 2.5 0 Z" fill={fill} />
+      <path d="M3.5 0 Q 10 -0.9 16 -0.2" fill="none" stroke={vein} strokeOpacity="0.55" strokeWidth="0.8" strokeLinecap="round" />
+    </>
+  );
+}
+
+// A small curl coming off the stem.
+export function Tendril({ x, y, angle, side, color }: { x: number; y: number; angle: number; side: 1 | -1; color: string }) {
+  return (
+    <path
+      d="M0 0 C 3 -1, 7 -5, 6 -9 C 5.4 -11.5, 2.4 -11.2, 2.6 -8.6"
+      transform={`translate(${x} ${y}) rotate(${angle}) scale(1 ${-side})`}
+      fill="none"
+      stroke={color}
+      strokeWidth="1"
+      strokeLinecap="round"
+    />
+  );
+}
 
 export function Fern({ className }: Props) {
   const leaves = Array.from({ length: 9 }, (_, i) => i);
@@ -21,43 +58,22 @@ export function Fern({ className }: Props) {
   );
 }
 
-export function Sprig({ className }: Props) {
-  return (
-    <svg viewBox="0 0 160 120" fill="none" className={className} aria-hidden="true">
-      <path d="M8 112 C 40 90, 80 60, 150 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      {[
-        [40, 90, -30],
-        [62, 74, 20],
-        [84, 60, -35],
-        [104, 46, 15],
-        [124, 32, -40],
-      ].map(([x, y, r], i) => (
-        <ellipse
-          key={i}
-          cx={x}
-          cy={y - (i % 2 ? -10 : 10)}
-          rx="12"
-          ry="5"
-          transform={`rotate(${r} ${x} ${y - (i % 2 ? -10 : 10)})`}
-          stroke="currentColor"
-          strokeWidth="1.2"
-          fill="currentColor"
-          fillOpacity="0.14"
-        />
-      ))}
-    </svg>
-  );
-}
+// A small divider sprig: a gently bowed stem with leaves and a bud at the tip.
+const sprigCurve = rounded((t) => ({
+  x: 8 + 150 * t,
+  y: 58 - 30 * t - 14 * Math.sin(Math.PI * t),
+}));
 
-// A five-petal wildflower. Petal and center colors are set by CSS variables
-// so the same flower can be pink or yellow.
-export function Bloom({ className, petal = "var(--color-foxglove)", center = "var(--color-buttercup)" }: Props & { petal?: string; center?: string }) {
+export function Sprig({ className }: Props) {
+  const leaves = leavesAlong(sprigCurve, 9, { start: 0.08, end: 0.86, sizeFrom: 26, sizeTo: 15, spread: 52 });
+  const tip = sprigCurve(1);
   return (
-    <svg viewBox="0 0 40 40" className={className} aria-hidden="true">
-      {[0, 72, 144, 216, 288].map((r) => (
-        <ellipse key={r} cx="20" cy="10" rx="6" ry="9" fill={petal} transform={`rotate(${r} 20 20)`} />
+    <svg viewBox="0 0 170 70" className={className} aria-hidden="true">
+      <path d={stemPath(sprigCurve)} fill="none" stroke="var(--color-fern-dark)" strokeWidth="1.5" strokeLinecap="round" />
+      {leaves.map((l, i) => (
+        <Leaf key={i} spot={l} fill={i % 3 === 1 ? "var(--color-sage)" : "var(--color-fern)"} />
       ))}
-      <circle cx="20" cy="20" r="5" fill={center} />
+      <BloomShape x={tip.x} y={tip.y} scale={0.36} petal="var(--color-foxglove)" center="var(--color-buttercup)" />
     </svg>
   );
 }
@@ -67,41 +83,61 @@ export function BloomShape({ x, y, scale = 1, petal, center }: { x: number; y: n
   return (
     <g transform={`translate(${x - 20 * scale} ${y - 20 * scale}) scale(${scale})`}>
       {[0, 72, 144, 216, 288].map((r) => (
-        <ellipse key={r} cx="20" cy="10" rx="6" ry="9" fill={petal} transform={`rotate(${r} 20 20)`} />
+        <path key={r} d="M20 20 C 13 14, 14 3, 20 2 C 26 3, 27 14, 20 20 Z" fill={petal} transform={`rotate(${r} 20 20)`} />
       ))}
-      <circle cx="20" cy="20" r="5" fill={center} />
+      {[36, 108, 180, 252, 324].map((r) => (
+        <path key={r} d="M20 20 L20 9" stroke={center} strokeOpacity="0.5" strokeWidth="0.8" transform={`rotate(${r - 36} 20 20)`} />
+      ))}
+      <circle cx="20" cy="20" r="4.5" fill={center} />
     </g>
   );
 }
 
-// The arch of leaves and flowers that frames the hero.
+// Two vines climbing from the bottom corners and meeting under a flower at the top.
+const arcLeft = rounded((t) => {
+  const a = Math.PI - t * (Math.PI / 2 - 0.08);
+  return { x: 150 + Math.cos(a) * 128, y: 178 - Math.sin(a) * 152 };
+});
+const arcRight = rounded((t) => {
+  const p = arcLeft(t);
+  return { x: 300 - p.x, y: p.y };
+});
+
 export function Arch({ className }: Props) {
-  const left = Array.from({ length: 11 }, (_, i) => {
-    const t = i / 10;
-    const angle = Math.PI - t * (Math.PI / 2);
-    return { x: 150 + Math.cos(angle) * 130, y: 170 - Math.sin(angle) * 150, r: (angle * 180) / Math.PI };
-  });
-  const right = left.map((p) => ({ x: 300 - p.x, y: p.y, r: 180 - p.r }));
+  const sides = [arcLeft, arcRight].map((curve, s) => ({
+    curve,
+    leaves: leavesAlong(curve, 13, { start: 0.04, end: 0.9, sizeFrom: 22, sizeTo: 12, spread: 46, firstSide: s === 0 ? 1 : -1 }),
+  }));
+  const buttercup = { petal: "var(--color-buttercup)", center: "var(--color-fern-dark)" };
+  const foxglove = { petal: "var(--color-foxglove)", center: "var(--color-buttercup)" };
+  // Mirror the positions but swap the colors so the two sides aren't identical.
+  const blooms = [
+    [{ t: 0.36, scale: 0.5, ...buttercup }, { t: 0.68, scale: 0.42, ...foxglove }],
+    [{ t: 0.36, scale: 0.5, ...foxglove }, { t: 0.68, scale: 0.42, ...buttercup }],
+  ];
+
   return (
     <svg viewBox="0 0 300 190" fill="none" className={className} aria-hidden="true">
-      <path d="M20 172 C 20 60, 90 18, 150 18 C 210 18, 280 60, 280 172" stroke="var(--color-fern)" strokeWidth="1.6" strokeLinecap="round" />
-      {[...left, ...right].map((p, i) => (
-        <ellipse
-          key={i}
-          cx={p.x}
-          cy={p.y}
-          rx="11"
-          ry="4.5"
-          transform={`rotate(${p.r + (i % 2 ? 50 : -50)} ${p.x} ${p.y})`}
-          fill={i % 3 === 0 ? "var(--color-fern)" : "var(--color-sage)"}
-          fillOpacity="0.85"
-        />
+      {sides.map(({ curve, leaves }, s) => (
+        <g key={s}>
+          <path d={stemPath(curve)} stroke="var(--color-fern-dark)" strokeWidth="1.5" strokeLinecap="round" />
+          {[0.2, 0.52, 0.8].map((t, i) => {
+            const p = curve(t);
+            const side = (i % 2 === 0 ? -1 : 1) * (s === 0 ? 1 : -1);
+            return <Tendril key={t} x={p.x} y={p.y} angle={heading(curve, t)} side={side as 1 | -1} color="var(--color-fern)" />;
+          })}
+          {leaves.map((l, i) => (
+            <Leaf key={i} spot={l} fill={i % 3 === 2 ? "var(--color-sage)" : i % 3 === 1 ? "var(--color-fern-dark)" : "var(--color-fern)"} />
+          ))}
+          {blooms[s].map((b) => {
+            const p = curve(b.t);
+            return <BloomShape key={b.t} x={p.x} y={p.y} scale={b.scale} petal={b.petal} center={b.center} />;
+          })}
+        </g>
       ))}
-      <BloomShape x={150} y={18} scale={0.9} petal="var(--color-foxglove)" center="var(--color-buttercup)" />
-      <BloomShape x={34} y={96} scale={0.5} petal="var(--color-buttercup)" center="var(--color-fern-dark)" />
-      <BloomShape x={266} y={96} scale={0.5} petal="var(--color-foxglove)" center="var(--color-buttercup)" />
-      <BloomShape x={74} y={38} scale={0.5} petal="var(--color-foxglove)" center="var(--color-buttercup)" />
-      <BloomShape x={226} y={38} scale={0.5} petal="var(--color-buttercup)" center="var(--color-fern-dark)" />
+      <BloomShape x={150} y={22} scale={0.95} petal="var(--color-foxglove)" center="var(--color-buttercup)" />
+      <BloomShape x={128} y={30} scale={0.45} petal="var(--color-buttercup)" center="var(--color-fern-dark)" />
+      <BloomShape x={172} y={30} scale={0.45} petal="var(--color-buttercup)" center="var(--color-fern-dark)" />
     </svg>
   );
 }

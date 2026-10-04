@@ -34,7 +34,7 @@ export default function Home() {
         </Link>
       </section>
 
-      <Sprig className="mx-auto my-10 w-28 text-sage" />
+      <Sprig className="mx-auto my-10 w-44" />
 
       <ul className="grid grid-cols-2 gap-3">
         {tiles.map((t) => (

@@ -259,6 +259,8 @@ export function RsvpFlow({ deadlineLabel }: { deadlineLabel: string | null }) {
             <ul className="divide-y divide-lichen rounded-2xl bg-card px-4 ring-1 ring-lichen">
               {party.guests.map((g) => {
                 const a = answers.find((x) => x.id === g.id)!;
+                // A +1 they're not bringing isn't a person worth listing.
+                if (g.isPlaceholder && !a.attending) return null;
                 const name = g.isPlaceholder ? (a.attending ? `${a.firstName} ${a.lastName}`.trim() : "Guest") : `${g.firstName} ${g.lastName}`.trim();
                 return (
                   <li key={g.id} className="py-3">
