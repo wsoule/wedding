@@ -20,3 +20,13 @@ describe("createLimiter", () => {
     expect(limiter.blocked("ip", 1)).toBe(false);
   });
 });
+
+describe("createLimiter eviction", () => {
+  it("drops only expired keys when the map gets large", () => {
+    const limiter = createLimiter({ max: 1, windowMs: 1000 });
+    limiter.fail("keep", 5000);
+    for (let i = 0; i < 10_001; i++) limiter.fail(`old${i}`, 0);
+    limiter.fail("trigger", 5000);
+    expect(limiter.blocked("keep", 5001)).toBe(true);
+  });
+});

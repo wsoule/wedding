@@ -10,7 +10,9 @@ export function createLimiter({ max, windowMs }: { max: number; windowMs: number
     },
     fail(key: string, now = Date.now()) {
       failures.set(key, [...recent(key, now), now]);
-      if (failures.size > 10_000) failures.clear();
+      if (failures.size > 10_000) {
+        for (const k of failures.keys()) if (recent(k, now).length === 0) failures.delete(k);
+      }
     },
     reset(key: string) {
       failures.delete(key);

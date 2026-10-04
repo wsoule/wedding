@@ -18,14 +18,20 @@ const refresh = () => revalidatePath("/", "layout");
 
 // ── Session ────────────────────────────────────────────────────────────────
 
-// 10 wrong passwords per IP per 15 minutes.
+// 10 wrong passwords per IP, and 50 overall, per 15 minutes.
 const loginLimiter = createLimiter({ max: 10, windowMs: 15 * 60_000 });
+const globalLoginLimiter = createLimiter({ max: 50, windowMs: 15 * 60_000 });
 
 export async function login(_: string | null, form: FormData): Promise<string | null> {
-  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  if (loginLimiter.blocked(ip)) return "Too many wrong passwords. Try again in 15 minutes.";
+  // The last X-Forwarded-For entry is the one Railway's proxy appended;
+  // earlier entries come from the client and can be made up.
+  const ip = (await headers()).get("x-forwarded-for")?.split(",").at(-1)?.trim() || "unknown";
+  if (loginLimiter.blocked(ip) || globalLoginLimiter.blocked("all")) {
+    return "Too many wrong passwords. Try again in 15 minutes.";
+  }
   if (!passwordMatches(str(form, "password"))) {
     loginLimiter.fail(ip);
+    globalLoginLimiter.fail("all");
     return "That password isn't right.";
   }
   loginLimiter.reset(ip);
