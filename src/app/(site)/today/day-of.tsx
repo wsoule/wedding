@@ -75,10 +75,9 @@ export function FindTable() {
         {result?.found === false && <p className="mt-3 text-center text-moss-soft">We couldn&rsquo;t find that name. Try the name on your invitation, or ask anyone in the wedding party.</p>}
         {result?.found && (
           <div className="print rise mx-auto mt-5 max-w-[15rem] py-6 text-center" style={{ rotate: "-1.5deg" }}>
-            <p className="text-moss-soft">{result.names}</p>
             {result.table ? (
               <>
-                <p className="mt-1 text-sm text-moss-soft">you&rsquo;re at table</p>
+                <p className="text-sm text-moss-soft">You&rsquo;re at table</p>
                 <p className="font-serif text-[4.5rem] leading-none text-foxglove-dark">{result.table}</p>
               </>
             ) : (

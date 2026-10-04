@@ -1,8 +1,8 @@
 // Field definitions for the editable content lists in /admin/content.
 
-export type ContentKind = "schedule" | "hotels" | "registry" | "faqs";
+export type ContentKind = "schedule" | "hotels" | "registry" | "faqs" | "story" | "party";
 
-type Field = { name: string; label: string; required?: boolean; long?: boolean; type?: "url" | "text" };
+type Field = { name: string; label: string; required?: boolean; long?: boolean; type?: "url" | "text" | "photo" | "side" };
 
 export const contentConfig: Record<ContentKind, { title: string; itemLabel: string; fields: Field[] }> = {
   schedule: {
@@ -34,6 +34,27 @@ export const contentConfig: Record<ContentKind, { title: string; itemLabel: stri
       { name: "title", label: "Name", required: true },
       { name: "url", label: "Link", required: true, type: "url" },
       { name: "blurb", label: "Short description" },
+    ],
+  },
+  story: {
+    title: "Our story",
+    itemLabel: "moment",
+    fields: [
+      { name: "when", label: "When (e.g. Fall 2019)", required: true },
+      { name: "title", label: "Title", required: true },
+      { name: "body", label: "The story", long: true },
+      { name: "photoId", label: "Photo", type: "photo" },
+    ],
+  },
+  party: {
+    title: "Wedding party",
+    itemLabel: "person",
+    fields: [
+      { name: "name", label: "Name", required: true },
+      { name: "role", label: "Role (e.g. Bridesmaid)", required: true },
+      { name: "side", label: "Standing with", type: "side" },
+      { name: "blurb", label: "How you know them", long: true },
+      { name: "photoId", label: "Photo", type: "photo" },
     ],
   },
   faqs: {

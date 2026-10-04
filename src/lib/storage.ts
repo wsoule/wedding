@@ -1,6 +1,6 @@
 import "server-only";
-import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 // Image bytes live in an S3-compatible bucket (a Railway bucket in production)
@@ -46,4 +46,10 @@ export async function getObject(key: string): Promise<Buffer | null> {
   } catch {
     return null;
   }
+}
+
+export async function deleteObject(key: string) {
+  safeKey(key);
+  if (s3) await s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
+  else await rm(path.join(localDir, key), { force: true });
 }

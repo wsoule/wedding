@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import { getFaqs, getHotels, getRegistry, getSchedule } from "@/lib/data";
+import { getFaqs, getHotels, getRegistry, getSchedule, getStory, getWeddingParty } from "@/lib/data";
+import { photoUrl } from "@/lib/photos";
 import { deleteContent, moveContent, saveContent } from "../../actions";
 import { contentConfig, type ContentKind } from "../../content-config";
 import { ConfirmButton } from "../confirm-button";
@@ -11,9 +12,18 @@ type Item = { id: string } & Record<string, unknown>;
 
 export default async function ContentPage() {
   await connection();
-  const [schedule, hotels, registry, faqs] = await Promise.all([getSchedule(), getHotels(), getRegistry(), getFaqs()]);
+  const [schedule, hotels, registry, faqs, story, party] = await Promise.all([
+    getSchedule(),
+    getHotels(),
+    getRegistry(),
+    getFaqs(),
+    getStory(),
+    getWeddingParty(),
+  ]);
   const sections: [ContentKind, Item[]][] = [
     ["schedule", schedule],
+    ["story", story],
+    ["party", party],
     ["hotels", hotels],
     ["registry", registry],
     ["faqs", faqs],
@@ -100,6 +110,37 @@ function Section({ kind, items }: { kind: ContentKind; items: Item[] }) {
 function Fields({ kind, item }: { kind: ContentKind; item?: Item }) {
   return contentConfig[kind].fields.map((f) => {
     const value = (item?.[f.name] as string | null | undefined) ?? "";
+    if (f.type === "photo") {
+      return (
+        <div key={f.name}>
+          <span className="mb-1 block text-sm text-moss-soft">{f.label}</span>
+          <div className="flex items-center gap-3">
+            {value && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={photoUrl(value, "sm")} alt="" className="h-16 w-16 shrink-0 rounded object-cover" />
+            )}
+            <input name={f.name} type="file" accept="image/*" className="min-w-0 flex-1 text-sm file:mr-3 file:rounded-full file:border-0 file:bg-paper-deep file:px-3 file:py-2" />
+          </div>
+          {value && (
+            <label className="mt-2 flex items-center gap-2 text-sm">
+              <input type="checkbox" name={`${f.name}__remove`} className="h-4 w-4 accent-fern" /> Remove photo
+            </label>
+          )}
+        </div>
+      );
+    }
+    if (f.type === "side") {
+      return (
+        <label key={f.name} className="block">
+          <span className="mb-1 block text-sm text-moss-soft">{f.label}</span>
+          <select name={f.name} defaultValue={value} className="field">
+            <option value="">Either</option>
+            <option>Jaden</option>
+            <option>Wyat</option>
+          </select>
+        </label>
+      );
+    }
     return (
       <label key={f.name} className="block">
         <span className="mb-1 block text-sm text-moss-soft">

@@ -5,9 +5,11 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
-import { faqs, guests, hotels, parties, registryLinks, scheduleItems, settings } from "@/db/schema";
+import { faqs, guests, hotels, parties, photos, registryLinks, scheduleItems, settings, storyItems, weddingParty } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
 import { parseGuestList, type ImportParty } from "@/lib/import";
+import { savePhoto } from "@/lib/photos";
+import { deleteObject } from "@/lib/storage";
 import { clientIp } from "@/lib/client-ip";
 import { createLimiter } from "@/lib/rate-limit";
 import { SESSION_COOKIE, SESSION_DAYS, createToken, passwordMatches } from "@/lib/session";
@@ -221,7 +223,7 @@ export async function saveSettings(form: FormData) {
 
 // ── Content lists ──────────────────────────────────────────────────────────
 
-const tables = { schedule: scheduleItems, hotels, registry: registryLinks, faqs } as const;
+const tables = { schedule: scheduleItems, hotels, registry: registryLinks, faqs, story: storyItems, party: weddingParty } as const;
 
 function kindOf(form: FormData): ContentKind {
   const kind = str(form, "kind") as ContentKind;
@@ -235,6 +237,13 @@ export async function saveContent(form: FormData) {
   const table = tables[kind];
   const values: Record<string, string | null> = {};
   for (const f of contentConfig[kind].fields) {
+    if (f.type === "photo") {
+      // Keep the current photo unless a new one is chosen or removal is ticked.
+      const file = form.get(f.name);
+      if (file instanceof File && file.size > 0) values[f.name] = (await savePhoto(file, { kind: "site" })).id;
+      else if (form.get(`${f.name}__remove`) === "on") values[f.name] = null;
+      continue;
+    }
     const v = opt(form, f.name);
     if (f.required && !v) return;
     values[f.name] = v;
@@ -273,5 +282,52 @@ export async function moveContent(form: FormData) {
     await tx.update(table).set({ sortOrder: neighbor.sortOrder }).where(eq(table.id, item.id));
     await tx.update(table).set({ sortOrder: item.sortOrder }).where(and(eq(table.id, neighbor.id)));
   });
+  refresh();
+}
+
+// ── Photos ─────────────────────────────────────────────────────────────────
+
+export async function setHeroPhoto(form: FormData) {
+  await requireAdmin();
+  const slot = Number(str(form, "slot"));
+  const file = form.get("photo");
+  if (!(slot >= 0 && slot < 4) || !(file instanceof File) || file.size === 0) return;
+  const photo = await savePhoto(file, { kind: "site" });
+  const [s] = await db.select({ ids: settings.heroPhotoIds }).from(settings).where(eq(settings.id, 1));
+  const ids = [...(s?.ids ?? [])];
+  ids[slot] = photo.id;
+  const clean = Array.from({ length: 4 }, (_, i) => ids[i]).filter(Boolean) as string[];
+  await db.insert(settings).values({ id: 1, heroPhotoIds: clean }).onConflictDoUpdate({ target: settings.id, set: { heroPhotoIds: clean } });
+  refresh();
+}
+
+export async function clearHeroPhoto(form: FormData) {
+  await requireAdmin();
+  const id = str(form, "id");
+  const [s] = await db.select({ ids: settings.heroPhotoIds }).from(settings).where(eq(settings.id, 1));
+  await db.update(settings).set({ heroPhotoIds: (s?.ids ?? []).filter((x) => x !== id) }).where(eq(settings.id, 1));
+  refresh();
+}
+
+export async function setPhotoHidden(form: FormData) {
+  await requireAdmin();
+  await db.update(photos).set({ hidden: str(form, "hidden") === "1" }).where(eq(photos.id, str(form, "id")));
+  refresh();
+}
+
+export async function deletePhoto(form: FormData) {
+  await requireAdmin();
+  const id = str(form, "id");
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return;
+  await db.delete(photos).where(eq(photos.id, id));
+  await Promise.all([deleteObject(`${id}.webp`), deleteObject(`${id}-sm.webp`)]);
+  refresh();
+}
+
+// ── Notes ──────────────────────────────────────────────────────────────────
+
+export async function setNoteHidden(form: FormData) {
+  await requireAdmin();
+  await db.update(parties).set({ messageHidden: str(form, "hidden") === "1" }).where(eq(parties.id, str(form, "id")));
   refresh();
 }
