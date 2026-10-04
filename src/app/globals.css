@@ -111,11 +111,123 @@
   }
 }
 
+/* ── Botanical motion ─────────────────────────────────────────────────── */
+
+/* Stems draw themselves in. Paths need pathLength="1". */
+.stem-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: draw 1.6s cubic-bezier(0.45, 0, 0.2, 1) forwards;
+}
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Leaves unfurl from where they meet the stem (their local 0,0). */
+.leaf-grow {
+  transform-origin: 0 0;
+  animation: leaf-grow 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes leaf-grow {
+  from {
+    transform: scale(0);
+  }
+}
+
+/* Then keep moving, a little, like there's a breeze. */
+.sway {
+  transform-origin: 0 0;
+  animation: sway 3.4s ease-in-out infinite alternate;
+}
+@keyframes sway {
+  from {
+    transform: rotate(-5deg);
+  }
+  to {
+    transform: rotate(5deg);
+  }
+}
+
+.bloom-open {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: bloom-open 1s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes bloom-open {
+  from {
+    transform: scale(0) rotate(-140deg);
+  }
+}
+
+/* Sprigs wait until they scroll into view (see <GrowInView>). */
+.grow-on-view:not(.in-view) :is(.stem-draw, .leaf-grow, .bloom-open) {
+  animation-play-state: paused;
+}
+
+/* Text that rises into place; stagger with an inline animation-delay. */
+.rise {
+  animation: rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.amp-in {
+  display: inline-block;
+  animation: amp-in 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes amp-in {
+  from {
+    opacity: 0;
+    transform: scale(0.4) rotate(-25deg);
+  }
+}
+
+/* Falling petals. Position, timing and drift come from inline custom properties. */
+.petal {
+  position: absolute;
+  top: 0;
+  left: var(--x);
+  animation: petal-fall var(--dur) linear var(--delay) infinite;
+}
+.petal > svg {
+  animation: petal-flutter calc(var(--dur) / 4) ease-in-out var(--delay) infinite alternate;
+}
+@keyframes petal-fall {
+  from {
+    transform: translate3d(0, -8vh, 0) rotate(0deg);
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.9;
+  }
+  90% {
+    opacity: 0.9;
+  }
+  to {
+    transform: translate3d(var(--drift), 105vh, 0) rotate(var(--spin));
+    opacity: 0;
+  }
+}
+@keyframes petal-flutter {
+  from {
+    transform: translateX(-14px) rotateY(0deg);
+  }
+  to {
+    transform: translateX(14px) rotateY(70deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .petal {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }

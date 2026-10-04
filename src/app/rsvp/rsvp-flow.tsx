@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
+import { Petals } from "@/components/petals";
 import { calendarUrl, site } from "@/content/site";
 import { searchParties, submitRsvp, unlockParty, type LoadedParty, type PartyMatch } from "./actions";
 import { Vine } from "./vine";
@@ -527,6 +528,7 @@ function Summary({ party }: { party: LoadedParty }) {
 function Done({ coming }: { coming: boolean }) {
   return (
     <div className="text-center">
+      {coming && <Petals variant="shower" />}
       <h1 className="text-[2.4rem]">{coming ? "See you there!" : "Thank you for letting us know"}</h1>
       <p className="mt-3 text-moss-soft">
         {coming
