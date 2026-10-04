@@ -58,6 +58,7 @@ async function toLoaded(party: NonNullable<Awaited<ReturnType<typeof getParty>>>
   return {
     id: party.id,
     message: party.message,
+    messagePublic: party.messagePublic,
     song: party.song,
     respondedAt: party.respondedAt?.toISOString() ?? null,
     guests: party.guests.map((g) => ({
@@ -115,7 +116,7 @@ export async function submitRsvp(
     }
     await tx
       .update(parties)
-      .set({ message: value.message, song: value.song, respondedAt: now, updatedAt: now })
+      .set({ message: value.message, messagePublic: !!value.message && value.messagePublic, song: value.song, respondedAt: now, updatedAt: now })
       .where(eq(parties.id, partyId));
   });
 

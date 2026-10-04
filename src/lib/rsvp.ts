@@ -20,6 +20,7 @@ export const rsvpInput = z.object({
     }),
   ),
   message: text(1000),
+  messagePublic: z.boolean().optional().default(false),
   song: text(200),
 });
 

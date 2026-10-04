@@ -24,6 +24,7 @@ export function RsvpFlow({ deadlineLabel }: { deadlineLabel: string | null }) {
   const [pass, setPass] = useState("");
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [message, setMessage] = useState("");
+  const [sharePublicly, setSharePublicly] = useState(false);
   const [song, setSong] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -55,6 +56,7 @@ export function RsvpFlow({ deadlineLabel }: { deadlineLabel: string | null }) {
           })),
         );
         setMessage(p.message ?? "");
+        setSharePublicly(p.messagePublic);
         setSong(p.song ?? "");
         go("hello");
         resolve(null);
@@ -81,6 +83,7 @@ export function RsvpFlow({ deadlineLabel }: { deadlineLabel: string | null }) {
           dietary: a.dietary,
         })),
         message,
+        messagePublic: sharePublicly,
         song,
       });
       if (!res.ok) return setError(res.error);
@@ -252,6 +255,20 @@ export function RsvpFlow({ deadlineLabel }: { deadlineLabel: string | null }) {
                 <span className="mb-1.5 block font-medium">A note for {site.couple[0]} & {site.couple[1]}</span>
                 <textarea className="field min-h-32 resize-none" value={message} onChange={(e) => setMessage(e.target.value)} />
               </label>
+              {message.trim() && (
+                <label className="flex items-start gap-3 text-[0.95rem]">
+                  <input
+                    type="checkbox"
+                    checked={sharePublicly}
+                    onChange={(e) => setSharePublicly(e.target.checked)}
+                    className="mt-1 h-5 w-5 shrink-0 accent-fern"
+                  />
+                  <span>
+                    Share it on our well-wishes wall too
+                    <span className="block text-sm text-moss-soft">Other guests will see it with your first name.</span>
+                  </span>
+                </label>
+              )}
             </div>
           </Panel>
         )}

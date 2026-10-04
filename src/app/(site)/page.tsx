@@ -6,7 +6,7 @@ import { Countdown } from "@/components/countdown";
 import { PhotoStrip } from "@/components/photo-strip";
 import { Reveal } from "@/components/reveal";
 import { site } from "@/content/site";
-import { getSettings } from "@/lib/data";
+import { getSettings, isDayOf } from "@/lib/data";
 import { getPhotosById, photoUrl } from "@/lib/photos";
 
 const tiles = [
@@ -31,6 +31,12 @@ export default async function Home() {
 
   return (
     <>
+      {isDayOf(settings) && (
+        <Link href="/today" className="print rise mt-5 block px-5 py-4 text-center" style={{ rotate: "-1deg" }}>
+          <span className="block font-serif text-[1.7rem] italic leading-none text-foxglove-dark">It&rsquo;s today!</span>
+          <span className="mt-1 block text-sm text-moss-soft">See what&rsquo;s happening and find your table</span>
+        </Link>
+      )}
       <section className="relative pt-5">
         <Spray animate delay={1.6} className="pointer-events-none absolute top-[38%] -left-10 w-44 -rotate-12" />
         <Spray animate flip delay={1.9} className="pointer-events-none absolute top-[12%] -right-12 w-44 rotate-[18deg]" />

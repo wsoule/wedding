@@ -14,6 +14,10 @@ export function createLimiter({ max, windowMs }: { max: number; windowMs: number
         for (const k of failures.keys()) if (recent(k, now).length === 0) failures.delete(k);
       }
     },
+    // Same as fail, for limits that count successes (like uploads).
+    hit(key: string, now = Date.now()) {
+      this.fail(key, now);
+    },
     reset(key: string) {
       failures.delete(key);
     },
