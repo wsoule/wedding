@@ -5,8 +5,8 @@ export const runtime = "nodejs";
 
 const mealOptions = new Set(["chicken", "beef", "fish", "veg", "vegan"]);
 
-function clean(value: unknown) {
-  return typeof value === "string" ? value.trim() : "";
+function clean(value: unknown, maxLength = 500) {
+  return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
 }
 
 function toClientRsvp(row: typeof rsvps.$inferSelect) {
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
 
   const data = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
   const name = clean(data.name);
-  const email = clean(data.email).toLowerCase();
+  const email = clean(data.email, 320).toLowerCase();
   const attending = data.attending === "no" ? false : true;
   const meal = mealOptions.has(clean(data.meal)) ? clean(data.meal) : "chicken";
 
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     meal: attending ? meal : null,
     dietary: attending ? clean(data.dietary) || null : null,
     song: attending ? clean(data.song) || null : null,
-    note: clean(data.note) || null,
+    note: clean(data.note, 2000) || null,
     updatedAt: now,
   };
 

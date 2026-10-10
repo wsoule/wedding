@@ -340,11 +340,11 @@ export function Gallery() {
 export function Venue({ venue }) {
   const mapsUrl = `https://maps.google.com/?q=${encodeURIComponent(venue.address)}`;
   const calUrl = (() => {
-    // Build a simple gcal link — 5pm-11pm local on the date.
+    // Build a simple gcal link — 4pm (doors) to midnight EDT (UTC-4).
     const d = venue.dateStart.replace(/-/g, '');
     const e = venue.dateEnd.replace(/-/g, '');
-    const start = `${d}T230000Z`;
-    const end = `${e}T050000Z`;
+    const start = `${d}T200000Z`;
+    const end = `${e}T040000Z`;
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(venue.calTitle)}&dates=${start}/${end}&location=${encodeURIComponent(venue.address)}&details=${encodeURIComponent(venue.calDetails)}`;
   })();
 

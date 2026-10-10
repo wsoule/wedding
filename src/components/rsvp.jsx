@@ -8,11 +8,18 @@ import { Daisy, Sprig } from "./florals";
 export function RSVP() {
   const STORAGE_KEY = 'wj_rsvp_v1';
 
-  const [submitted, setSubmitted] = React.useState(() => {
-    if (typeof window === "undefined") return null;
-    try { return JSON.parse(window.localStorage.getItem(STORAGE_KEY) || 'null'); }
-    catch { return null; }
-  });
+  const [submitted, setSubmitted] = React.useState(null);
+
+  // Read the saved reply after mount so the client's first render matches the
+  // prerendered HTML (reading localStorage during render causes a hydration
+  // mismatch for returning guests).
+  React.useEffect(() => {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || 'null');
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (saved) setSubmitted(saved);
+    } catch {}
+  }, []);
 
   const [form, setForm] = React.useState({
     name: '',
