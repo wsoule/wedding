@@ -35,7 +35,11 @@ export function RSVP() {
   const [pending, setPending] = React.useState(false);
   const [serverError, setServerError] = React.useState("");
 
-  const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
+  const set = (k) => (e) => {
+    const value = e.target.value;
+    setForm(f => ({ ...f, [k]: value }));
+    setErrors(errs => (errs[k] ? { ...errs, [k]: undefined } : errs));
+  };
   const setAttending = (v) => setForm(f => ({ ...f, attending: v }));
 
   const submit = async (e) => {
@@ -131,12 +135,17 @@ export function RSVP() {
                 <div className="rsvp-field">
                   <label htmlFor="r-name">Your name</label>
                   <input id="r-name" type="text" value={form.name}
+                         autoComplete="name" autoCapitalize="words"
+                         aria-invalid={errors.name ? true : undefined}
                          onChange={set('name')} placeholder="First & last" />
                   {errors.name && <span className="err">{errors.name}</span>}
                 </div>
                 <div className="rsvp-field">
                   <label htmlFor="r-email">Email</label>
                   <input id="r-email" type="email" value={form.email}
+                         autoComplete="email" inputMode="email"
+                         autoCapitalize="none" spellCheck={false}
+                         aria-invalid={errors.email ? true : undefined}
                          onChange={set('email')} placeholder="you@example.com" />
                   {errors.email && <span className="err">{errors.email}</span>}
                 </div>
@@ -147,6 +156,7 @@ export function RSVP() {
                   <div className="rsvp-field">
                     <label htmlFor="r-plus">Plus-one name <span className="hint">(if you have one)</span></label>
                     <input id="r-plus" type="text" value={form.plusOne}
+                           autoComplete="off" autoCapitalize="words"
                            onChange={set('plusOne')}
                            placeholder="Leave blank if just you" />
                   </div>

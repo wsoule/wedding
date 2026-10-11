@@ -1172,6 +1172,9 @@ html[data-floral="lush"] .petal-field .petal { opacity: 0.9; }
   font-size: 13px;
 }
 .rsvp-field select {
+  height: auto;
+  line-height: 1.55;
+  border-radius: 0;
   appearance: none;
   -webkit-appearance: none;
   cursor: pointer;
@@ -1245,7 +1248,7 @@ html[data-floral="lush"] .petal-field .petal { opacity: 0.9; }
   grid-template-columns: 1fr 1fr;
   gap: 22px;
 }
-@media (max-width: 600px) { .rsvp-row { grid-template-columns: 1fr; } }
+@media (max-width: 600px) { .rsvp-row { grid-template-columns: 1fr; row-gap: 0; } }
 
 @media (max-width: 600px) {
   #rsvp {
@@ -1262,7 +1265,6 @@ html[data-floral="lush"] .petal-field .petal { opacity: 0.9; }
   .rsvp-shell {
     width: 100%;
     max-width: none;
-    min-height: 100svh;
     border-radius: 0;
     padding: 44px 24px 52px;
   }
@@ -1274,9 +1276,10 @@ html[data-floral="lush"] .petal-field .petal { opacity: 0.9; }
     margin-bottom: 28px;
   }
   .rsvp-toggle button {
-    padding: 14px 10px;
-    font-size: 12px;
-    letter-spacing: 0.12em;
+    padding: 14px 6px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
   }
   .rsvp-field label {
     letter-spacing: 0.18em;
@@ -1298,6 +1301,9 @@ html[data-floral="lush"] .petal-field .petal { opacity: 0.9; }
 .rsvp-success {
   text-align: center;
   padding: 16px 0;
+}
+@media (max-width: 600px) {
+  .rsvp-success { padding: 24px 0 40px; }
 }
 .rsvp-success h3 {
   font-family: var(--f-script);
