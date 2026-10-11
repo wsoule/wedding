@@ -56,7 +56,7 @@ export default function WeddingApp() {
     <>
       <nav className={`nav ${scrolled ? "scrolled" : ""} ${drawerOpen ? "nav-drawer open" : ""}`}>
         <a href="#hero" className="nav-mono" onClick={closeDrawer}>
-          W &amp; J
+          J &amp; W
         </a>
         <div className="nav-links">
           {nav.map((item) => (
@@ -81,7 +81,7 @@ export default function WeddingApp() {
       </nav>
 
       <Hero
-        couple={["Wyat", "Jaden"]}
+        couple={["Jaden", "Wyat"]}
         dateText={{ month: "May", day: "XXII", year: "MMXXVII" }}
         venueShort="Little Flower Barn · Lake Isabella, Michigan"
       />
@@ -91,7 +91,7 @@ export default function WeddingApp() {
           address: "565 N. Coldwater Road, Lake Isabella, MI 48893",
           dateStart: "2027-05-22",
           dateEnd: "2027-05-23",
-          calTitle: "Wyat & Jaden's Wedding",
+          calTitle: "Jaden & Wyat's Wedding",
           calDetails: "Ceremony at 4:30 PM. Garden formal attire.",
         }}
       />

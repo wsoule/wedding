@@ -1,6 +1,6 @@
 # Wedding Website
 
-Next.js wedding site for Wyat & Jaden, ported from the high-fidelity prototype in `design/`.
+Next.js wedding site for Jaden & Wyat, ported from the high-fidelity prototype in `design/`.
 
 ## Local Development
 

@@ -49,188 +49,22 @@ export function Hero({ couple, dateText, venueShort }) {
 }
 
 // ── Gallery ─────────────────────────────────────────────────────────────────
-// A scroll-grown vine: each image slot is clipped into a leaf frame and appears
-// as the vine draws through the section.
+// An editorial collage of framed photos. To add a photo, put the file in
+// public/photos/ and set its `src` (e.g. '/photos/proposal.jpg'). Frames
+// without a photo show a soft botanical placeholder.
 
-const VINE_LEAVES = [
-  {
-    id: 'eng-1',
-    label: 'Favorite',
-    side: -1,
-    x: 23,
-    y: 12,
-    angle: -21,
-    grow: 0.12,
-    branch: 'M27 7 C24 8 21 11 19 15',
-  },
-  {
-    id: 'eng-2',
-    label: 'Engagement',
-    side: 1,
-    x: 77,
-    y: 21,
-    angle: 20,
-    grow: 0.22,
-    branch: 'M75 18 C80 18 83 21 84 25',
-  },
-  {
-    id: 'eng-3',
-    label: 'Candid',
-    side: -1,
-    x: 23,
-    y: 34,
-    angle: -17,
-    grow: 0.34,
-    branch: 'M28 32 C24 31 20 34 18 38',
-  },
-  {
-    id: 'eng-4',
-    label: 'Photo',
-    side: 1,
-    x: 78,
-    y: 45,
-    angle: 17,
-    grow: 0.46,
-    branch: 'M73 44 C79 44 82 47 84 52',
-  },
-  {
-    id: 'eng-5',
-    label: 'Laughter',
-    side: -1,
-    x: 23,
-    y: 58,
-    angle: -20,
-    grow: 0.58,
-    branch: 'M28 57 C24 56 21 59 19 64',
-  },
-  {
-    id: 'eng-6',
-    label: 'Walk',
-    side: 1,
-    x: 77,
-    y: 70,
-    angle: 22,
-    grow: 0.69,
-    branch: 'M75 69 C81 70 83 74 84 79',
-  },
-  {
-    id: 'eng-7',
-    label: 'Proposal',
-    side: -1,
-    x: 23,
-    y: 84,
-    angle: -22,
-    grow: 0.81,
-    branch: 'M29 83 C24 82 21 85 19 90',
-  },
-  {
-    id: 'eng-8',
-    label: 'Us',
-    side: 1,
-    x: 72,
-    y: 96,
-    angle: 17,
-    grow: 0.89,
-    branch: 'M70 94 C75 94 79 97 81 100',
-  },
+const GALLERY_PHOTOS = [
+  { src: null, caption: 'The proposal', shape: 'arch' },
+  { src: null, caption: 'Early days', shape: 'rect' },
+  { src: null, caption: 'Adventures', shape: 'rect' },
+  { src: null, caption: 'Engaged', shape: 'arch' },
+  { src: null, caption: 'Home', shape: 'oval' },
+  { src: null, caption: 'Us', shape: 'rect' },
 ];
-
-const VINE_TENDRILS = [
-  { d: 'M58 12 C67 7 74 13 69 18 C64 22 63 15 70 15', grow: 0.08 },
-  { d: 'M39 29 C29 24 25 33 31 37 C37 40 39 33 32 32', grow: 0.3 },
-  { d: 'M62 44 C72 39 78 48 72 53 C66 57 65 49 73 49', grow: 0.46 },
-  { d: 'M38 58 C28 54 25 64 32 68 C38 71 39 62 32 62', grow: 0.6 },
-  { d: 'M60 72 C70 68 74 78 68 82 C62 86 62 76 69 77', grow: 0.72 },
-];
-
-const VINE_SMALL_LEAVES = [
-  { x: 43, y: 9, scale: 0.86, angle: -28, grow: 0.07 },
-  { x: 63, y: 20, scale: 0.76, angle: 42, grow: 0.18 },
-  { x: 42, y: 31, scale: 0.72, angle: -43, grow: 0.3 },
-  { x: 59, y: 43, scale: 0.82, angle: 39, grow: 0.42 },
-  { x: 40, y: 55, scale: 0.84, angle: -37, grow: 0.54 },
-  { x: 62, y: 68, scale: 0.76, angle: 35, grow: 0.66 },
-  { x: 43, y: 82, scale: 0.76, angle: -42, grow: 0.78 },
-  { x: 57, y: 94, scale: 0.86, angle: 33, grow: 0.9 },
-];
-
-const VINE_MAIN_PATH = 'M30 5 C54 3 77 10 78 20 C78 30 43 29 28 36 C14 44 61 45 77 47 C92 50 41 57 27 62 C14 68 62 71 78 73 C94 76 42 84 27 87 C15 91 48 97 72 97';
 
 export function Gallery() {
   const [lbIndex, setLbIndex] = React.useState(null);
-  const [images, setImages] = React.useState([]);
-  const containerRef = React.useRef(null);
-
-  // Build the list of currently-filled slots on demand.
-  const collectImages = React.useCallback(() => {
-    const slots = containerRef.current?.querySelectorAll('image-slot') || [];
-    const arr = [];
-    slots.forEach((s, i) => {
-      const img = s.shadowRoot && s.shadowRoot.querySelector('img');
-      if (img && img.src && img.style.display !== 'none') {
-        arr.push({ src: img.src, idx: i });
-      }
-    });
-    return arr;
-  }, []);
-
-  const openAt = React.useCallback((slotIdx) => {
-    const list = collectImages();
-    const pos = list.findIndex((x) => x.idx === slotIdx);
-    if (pos !== -1) {
-      setImages(list);
-      setLbIndex(pos);
-    }
-  }, [collectImages]);
-
-  React.useEffect(() => {
-    let raf = 0;
-    const stage = containerRef.current;
-    if (!stage) return undefined;
-
-    const growEls = Array.from(stage.querySelectorAll('[data-grow]'));
-    const clamp = (n) => Math.max(0, Math.min(1, n));
-    const update = () => {
-      raf = 0;
-      const rect = stage.getBoundingClientRect();
-      const vh = window.innerHeight || document.documentElement.clientHeight;
-      const progress = clamp((vh * 0.82 - rect.top) / (rect.height * 0.88));
-      stage.style.setProperty('--vine-progress', progress.toFixed(3));
-      growEls.forEach((el) => {
-        const growAt = Number(el.getAttribute('data-grow') || 0);
-        el.classList.toggle('grown', progress >= growAt);
-      });
-    };
-    const requestUpdate = () => {
-      if (!raf) raf = window.requestAnimationFrame(update);
-    };
-
-    update();
-    window.addEventListener('scroll', requestUpdate, { passive: true });
-    window.addEventListener('resize', requestUpdate);
-    return () => {
-      if (raf) window.cancelAnimationFrame(raf);
-      window.removeEventListener('scroll', requestUpdate);
-      window.removeEventListener('resize', requestUpdate);
-    };
-  }, []);
-
-  React.useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const onClick = (e) => {
-      const slot = e.target.closest('image-slot');
-      if (!slot) return;
-      // Only open if the slot is filled (img visible).
-      const img = slot.shadowRoot && slot.shadowRoot.querySelector('img');
-      if (!img || img.style.display === 'none' || !img.src) return;
-      // Find slot index by data-idx
-      const idx = parseInt(slot.getAttribute('data-idx'), 10);
-      openAt(idx);
-    };
-    el.addEventListener('click', onClick);
-    return () => el.removeEventListener('click', onClick);
-  }, [openAt]);
+  const images = GALLERY_PHOTOS.filter((p) => p.src);
 
   React.useEffect(() => {
     if (lbIndex === null) return;
@@ -251,84 +85,45 @@ export function Gallery() {
           <h2 className="section-title">Us, in pictures</h2>
           <Divider />
         </div>
-        <div className="vine-gallery reveal delay-1" ref={containerRef}>
-          <svg className="vine-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-            <path
-              className="vine-main vine-shadow"
-              pathLength="1"
-              d={VINE_MAIN_PATH}
-            />
-            <path
-              className="vine-main"
-              pathLength="1"
-              d={VINE_MAIN_PATH}
-            />
-            {VINE_LEAVES.map((leaf) => (
-              <path
-                key={leaf.id}
-                className="vine-branch"
-                pathLength="1"
-                data-grow={leaf.grow}
-                d={leaf.branch}
-              />
-            ))}
-            {VINE_TENDRILS.map((curl, i) => (
-              <path
-                key={`curl-${i}`}
-                className="vine-curl"
-                pathLength="1"
-                data-grow={curl.grow}
-                d={curl.d}
-              />
-            ))}
-            {VINE_SMALL_LEAVES.map((leaf, i) => (
-              <path
-                key={`leaf-${i}`}
-                className="vine-small-leaf"
-                data-grow={leaf.grow}
-                d="M0 0 C-3 -3 -3 -8 0 -11 C3 -8 3 -3 0 0"
-                transform={`translate(${leaf.x} ${leaf.y}) rotate(${leaf.angle}) scale(${leaf.scale})`}
-              />
-            ))}
-          </svg>
-          {VINE_LEAVES.map((leaf, i) => (
-            <div
-              key={leaf.id}
-              className={`vine-leaf ${leaf.side < 0 ? 'left' : 'right'}`}
-              data-idx={i}
-              data-grow={leaf.grow}
-              style={{
-                left: `${leaf.x}%`,
-                top: `${leaf.y}%`,
-                '--leaf-rotate': `${leaf.angle}deg`,
-              }}
-            >
-              <div className="vine-leaf-frame">
-                <image-slot
-                  id={leaf.id}
-                  data-idx={i}
-                  placeholder={leaf.label}
-                  shape="rect"
-                />
+        <div className="photo-collage">
+          {GALLERY_PHOTOS.map((photo, i) => (
+            <figure key={photo.caption} className={`photo reveal delay-${i % 3} shape-${photo.shape}`}>
+              <div className="photo-frame">
+                {photo.src ? (
+                  <button
+                    type="button"
+                    className="photo-open"
+                    aria-label={`View photo: ${photo.caption}`}
+                    onClick={() => setLbIndex(images.indexOf(photo))}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={photo.src} alt={photo.caption} loading="lazy" />
+                  </button>
+                ) : (
+                  <div className="photo-empty" aria-hidden="true">
+                    <Sprig className="no-sway" />
+                  </div>
+                )}
               </div>
-            </div>
+              <figcaption>{photo.caption}</figcaption>
+            </figure>
           ))}
         </div>
       </div>
 
       {lbIndex !== null && images[lbIndex] &&
       <div className="lightbox" onClick={() => setLbIndex(null)}>
-          <button className="lb-close" onClick={(e) => {e.stopPropagation();setLbIndex(null);}}>×</button>
+          <button className="lb-close" aria-label="Close" onClick={(e) => {e.stopPropagation();setLbIndex(null);}}>×</button>
           {images.length > 1 &&
         <>
-              <button className="lb-nav lb-prev"
+              <button className="lb-nav lb-prev" aria-label="Previous photo"
           onClick={(e) => {e.stopPropagation();setLbIndex((i) => (i - 1 + images.length) % images.length);}}>‹</button>
-              <button className="lb-nav lb-next"
+              <button className="lb-nav lb-next" aria-label="Next photo"
           onClick={(e) => {e.stopPropagation();setLbIndex((i) => (i + 1) % images.length);}}>›</button>
             </>
         }
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={images[lbIndex].src} alt="" onClick={(e) => e.stopPropagation()} />
+          <img src={images[lbIndex].src} alt={images[lbIndex].caption} onClick={(e) => e.stopPropagation()} />
         </div>
       }
     </section>);
@@ -554,7 +349,6 @@ export function Attire() {
 
         <div className="attire-grid">
           <div className="attire-text reveal">
-            <span className="badge">Garden Formal</span>
             <h3>Think wildflower picnic, but dressed up.</h3>
             <p>
               The ceremony is on a grassy lawn under open sky, and dinner is
@@ -565,15 +359,24 @@ export function Attire() {
             <p>
               <strong>For the gents:</strong> a suit or sport coat in
               tan, olive, or warm brown — no tie required.
-              <br />
+            </p>
+            <p>
               <strong>For the ladies:</strong> midi or floor-length, in a
               wildflower palette. Block heels or flats — your feet will
               thank you on the lawn.
             </p>
 
-            <div className="attire-chips" style={{ marginTop: 28 }}>
-              {yes.map((t) => <span key={t} className="chip">✓ {t}</span>)}
-              {no.map((t) => <span key={t} className="chip" style={{ color: 'var(--c-terra)' }}>✗ {t}</span>)}
+            <div className="attire-chip-group">
+              <span className="label">Yes, please</span>
+              <div className="attire-chips">
+                {yes.map((t) => <span key={t} className="chip">{t}</span>)}
+              </div>
+            </div>
+            <div className="attire-chip-group">
+              <span className="label">Perhaps skip</span>
+              <div className="attire-chips">
+                {no.map((t) => <span key={t} className="chip skip">{t}</span>)}
+              </div>
             </div>
           </div>
 
@@ -583,11 +386,11 @@ export function Attire() {
               {palette.map((p) =>
               <div key={p.c}>
                   <div className="ps" style={{ background: p.c }}></div>
-                  <div style={{ textAlign: 'center', marginTop: 8, fontFamily: 'var(--f-serif)', fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--c-muted)' }}>{p.label}</div>
+                  <div className="palette-swatch-label">{p.label}</div>
                 </div>
               )}
             </div>
-            <p style={{ marginTop: 28, fontStyle: 'italic', color: 'var(--c-muted)', fontSize: 15, textAlign: 'center' }}>
+            <p className="palette-note">
               Use these as a north star — not a uniform.
             </p>
           </div>
@@ -680,7 +483,7 @@ export function SiteFooter() {
     <footer data-screen-label="09 Footer">
       <Branch className="fbranch l no-sway" />
       <Branch flip className="fbranch r no-sway" />
-      <div className="fmono">Wyat &amp; Jaden</div>
+      <div className="fmono">Jaden &amp; Wyat</div>
       <div className="fdate">May 22, 2027 · Lake Isabella, Michigan</div>
     </footer>);
 

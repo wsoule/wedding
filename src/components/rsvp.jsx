@@ -77,12 +77,12 @@ export function RSVP() {
     <section id="rsvp" data-screen-label="06 RSVP">
       <Sprig className="hero-sprig-left no-sway"
              style={{ position: 'absolute', left: '4%', top: '12%',
-                      height: '70%', color: 'var(--c-honey)',
-                      opacity: 0.35 }}/>
+                      height: '62%', color: 'var(--c-honey)',
+                      opacity: 0.16 }}/>
       <Sprig flip className="hero-sprig-right no-sway"
              style={{ position: 'absolute', right: '4%', top: '12%',
-                      height: '70%', color: 'var(--c-honey)',
-                      opacity: 0.35 }}/>
+                      height: '62%', color: 'var(--c-honey)',
+                      opacity: 0.16 }}/>
       <div className="section-inner">
         <div className="section-head reveal">
           <span className="eyebrow">Kindly Reply</span>
@@ -145,7 +145,7 @@ export function RSVP() {
               {form.attending === 'yes' && (
                 <>
                   <div className="rsvp-field">
-                    <label htmlFor="r-plus">Plus-one name <span style={{textTransform:'none',letterSpacing:0}}>(if you have one)</span></label>
+                    <label htmlFor="r-plus">Plus-one name <span className="hint">(if you have one)</span></label>
                     <input id="r-plus" type="text" value={form.plusOne}
                            onChange={set('plusOne')}
                            placeholder="Leave blank if just you" />
