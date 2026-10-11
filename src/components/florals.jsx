@@ -5,47 +5,99 @@
 // All florals have a subtle CSS sway animation (defined in styles.css) — pass
 // className="no-sway" to opt out (e.g. inside the countdown petals).
 
-// ── Single leaf — almond-shaped, with center vein ───────────────────────────
+// ── Foliage helpers ──────────────────────────────────────────────────────────
+// Stems are cubic Béziers; leaves are placed along them, alternating sides,
+// angled toward the tip and shrinking as they go. Leaves are soft filled
+// shapes with a fine vein rather than outlined ovals.
+
+function bezierPoint([p0, p1, p2, p3], t) {
+  const u = 1 - t;
+  const x = u * u * u * p0[0] + 3 * u * u * t * p1[0] + 3 * u * t * t * p2[0] + t * t * t * p3[0];
+  const y = u * u * u * p0[1] + 3 * u * u * t * p1[1] + 3 * u * t * t * p2[1] + t * t * t * p3[1];
+  const dx = 3 * u * u * (p1[0] - p0[0]) + 6 * u * t * (p2[0] - p1[0]) + 3 * t * t * (p3[0] - p2[0]);
+  const dy = 3 * u * u * (p1[1] - p0[1]) + 6 * u * t * (p2[1] - p1[1]) + 3 * t * t * (p3[1] - p2[1]);
+  return { x, y, angle: (Math.atan2(dy, dx) * 180) / Math.PI };
+}
+
+const stemD = ([p0, p1, p2, p3]) =>
+  `M${p0[0]} ${p0[1]} C ${p1[0]} ${p1[1]}, ${p2[0]} ${p2[1]}, ${p3[0]} ${p3[1]}`;
+
+// A pointed, slightly asymmetric leaf lying along +x from its base at 0,0.
+const leafD = (len, w) =>
+  `M0 0 C ${len * 0.22} ${-w}, ${len * 0.68} ${-w * 0.95}, ${len} 0 ` +
+  `C ${len * 0.66} ${w * 0.8}, ${len * 0.24} ${w * 0.85}, 0 0 Z`;
+
+const LeafShape = ({ x, y, angle, len, width, opacity = 0.7 }) => (
+  <g transform={`translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${angle.toFixed(1)})`}>
+    <path d={leafD(len, width)} fill="currentColor" fillOpacity={opacity} />
+    <path d={`M${len * 0.06} 0 Q ${len * 0.5} ${-width * 0.12}, ${len * 0.9} 0`}
+          stroke="#fffaf0" strokeOpacity="0.45" strokeWidth={Math.max(0.4, width * 0.07)}
+          strokeLinecap="round" fill="none" />
+  </g>
+);
+
+// Renders a tapered stem with leaves along it.
+//   count   number of side leaves
+//   size    length of the largest leaf
+//   spread  leaf angle away from the stem, degrees
+function Stem({ curve, count, size, spread = 42, from = 0.1, to = 0.9, ratio = 0.34,
+                weight = 1.4, tipLeaf = true, flipSides = false }) {
+  const leaves = [];
+  for (let i = 0; i < count; i++) {
+    const t = from + ((to - from) * i) / Math.max(1, count - 1);
+    const p = bezierPoint(curve, t);
+    const side = (i % 2 === 0) !== flipSides ? -1 : 1;
+    const len = size * (1 - 0.45 * t) * (i % 3 === 1 ? 0.9 : 1);
+    const opacity = 0.55 + ((i * 37) % 25) / 100;
+    leaves.push(
+      <LeafShape key={i} x={p.x} y={p.y} angle={p.angle + side * spread}
+                 len={len} width={len * ratio} opacity={opacity} />,
+    );
+  }
+  const tip = bezierPoint(curve, 1);
+  const d = stemD(curve);
+  return (
+    <g>
+      <path d={d} stroke="currentColor" strokeWidth={weight * 0.6} strokeLinecap="round" fill="none" />
+      <path d={d} pathLength="1" strokeDasharray="0.55 1" stroke="currentColor"
+            strokeWidth={weight} strokeLinecap="round" fill="none" />
+      {leaves}
+      {tipLeaf && (
+        <LeafShape x={tip.x} y={tip.y} angle={tip.angle} len={size * 0.5}
+                   width={size * 0.5 * ratio} opacity={0.8} />
+      )}
+    </g>
+  );
+}
+
+// A small five-petal bloom with pointed petals and a honey center.
+const Bloom = ({ x, y, r = 10, rotate = 0, petal = "var(--c-blush)" }) => (
+  <g transform={`translate(${x} ${y}) rotate(${rotate})`}>
+    {Array.from({ length: 5 }).map((_, i) => (
+      <path key={i}
+            d={`M0 0 C ${-r * 0.5} ${-r * 0.35}, ${-r * 0.42} ${-r * 0.95}, 0 ${-r} C ${r * 0.42} ${-r * 0.95}, ${r * 0.5} ${-r * 0.35}, 0 0 Z`}
+            fill={petal} fillOpacity="0.92" transform={`rotate(${i * 72})`} />
+    ))}
+    <circle r={r * 0.22} fill="var(--c-honey)" />
+  </g>
+);
+
+// ── Single leaf ─────────────────────────────────────────────────────────────
 export const Leaf = ({ className = "", style = {}, flip = false }) => (
   <svg className={`floral leaf ${className}`} style={style}
        viewBox="0 0 40 80" fill="none"
        transform={flip ? "scale(-1,1)" : ""}>
-    <path d="M20 4 C 6 20, 4 50, 20 76 C 36 50, 34 20, 20 4 Z"
-          fill="currentColor" fillOpacity="0.18"
-          stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-    <path d="M20 6 L 20 74" stroke="currentColor" strokeWidth="0.9"
-          strokeLinecap="round"/>
+    <LeafShape x={20} y={78} angle={-90} len={74} width={15} opacity={0.75} />
   </svg>
 );
 
-// ── Eucalyptus-style sprig — a stem with alternating round leaves ──────────
+// ── Upright sprig — a gently curving stem of pointed leaves ────────────────
 export const Sprig = ({ className = "", style = {}, flip = false }) => (
   <svg className={`floral sprig ${className}`} style={style}
        viewBox="0 0 120 280" fill="none"
        transform={flip ? "scale(-1,1)" : ""}>
-    {/* Stem */}
-    <path d="M60 8 C 56 60, 64 130, 58 200 C 54 240, 62 268, 60 274"
-          stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" fill="none"/>
-    {/* Pairs of round leaves */}
-    {[30, 60, 95, 130, 165, 200, 235].map((y, i) => {
-      const rotL = -25 + (i * 3);
-      const rotR =  25 - (i * 3);
-      return (
-        <g key={i}>
-          <ellipse cx={60 - 22} cy={y} rx="14" ry="10"
-                   fill="currentColor" fillOpacity="0.22"
-                   stroke="currentColor" strokeWidth="0.9"
-                   transform={`rotate(${rotL} ${60 - 22} ${y})`}/>
-          <ellipse cx={60 + 22} cy={y + 6} rx="14" ry="10"
-                   fill="currentColor" fillOpacity="0.22"
-                   stroke="currentColor" strokeWidth="0.9"
-                   transform={`rotate(${rotR} ${60 + 22} ${y + 6})`}/>
-        </g>
-      );
-    })}
-    {/* Top tip */}
-    <ellipse cx="60" cy="12" rx="9" ry="6" fill="currentColor"
-             fillOpacity="0.3" stroke="currentColor" strokeWidth="0.9"/>
+    <Stem curve={[[62, 276], [48, 200], [74, 110], [58, 14]]}
+          count={10} size={50} spread={40} from={0.12} to={0.9} />
   </svg>
 );
 
@@ -54,28 +106,8 @@ export const Fern = ({ className = "", style = {}, flip = false }) => (
   <svg className={`floral fern ${className}`} style={style}
        viewBox="0 0 140 320" fill="none"
        transform={flip ? "scale(-1,1)" : ""}>
-    <path d="M70 10 C 60 80, 80 160, 65 240 C 58 280, 70 305, 70 314"
-          stroke="currentColor" strokeWidth="1.3" fill="none"
-          strokeLinecap="round"/>
-    {Array.from({ length: 18 }).map((_, i) => {
-      const t = i / 17;
-      const y = 20 + t * 280;
-      const baseX = 70 + Math.sin(t * 2.2) * 6;
-      const len = 32 - Math.abs(t - 0.5) * 30;
-      const tilt = 18 + t * 12;
-      return (
-        <g key={i}>
-          <path d={`M${baseX} ${y} Q ${baseX - len * 0.5} ${y + 4}, ${baseX - len} ${y - 6}`}
-                stroke="currentColor" strokeWidth="1.1" fill="none"
-                strokeLinecap="round" opacity="0.85"
-                transform={`rotate(${-tilt} ${baseX} ${y})`}/>
-          <path d={`M${baseX} ${y + 6} Q ${baseX + len * 0.5} ${y + 10}, ${baseX + len} ${y}`}
-                stroke="currentColor" strokeWidth="1.1" fill="none"
-                strokeLinecap="round" opacity="0.85"
-                transform={`rotate(${tilt} ${baseX} ${y + 6})`}/>
-        </g>
-      );
-    })}
+    <Stem curve={[[70, 314], [58, 220], [82, 110], [68, 10]]}
+          count={22} size={44} spread={58} ratio={0.18} from={0.06} to={0.94} weight={1.2} />
   </svg>
 );
 
@@ -84,17 +116,19 @@ export const Daisy = ({ className = "", style = {}, color = "currentColor",
                 centerColor = "var(--c-honey)" }) => (
   <svg className={`floral daisy ${className}`} style={style}
        viewBox="0 0 60 60" fill="none">
-    {Array.from({ length: 5 }).map((_, i) => {
-      const a = (i * 360 / 5) - 90;
-      return (
-        <ellipse key={i} cx="30" cy="14" rx="6" ry="13"
-                 fill={color} fillOpacity="0.85"
-                 stroke="currentColor" strokeWidth="0.8"
-                 transform={`rotate(${a} 30 30)`}/>
-      );
-    })}
-    <circle cx="30" cy="30" r="5" fill={centerColor}
-            stroke="currentColor" strokeWidth="0.8"/>
+    {Array.from({ length: 5 }).map((_, i) => (
+      <path key={i}
+            d="M30 30 C 22 24, 23 10, 30 4 C 37 10, 38 24, 30 30 Z"
+            fill={color} fillOpacity="0.88"
+            transform={`rotate(${i * 72} 30 30)`} />
+    ))}
+    {Array.from({ length: 5 }).map((_, i) => (
+      <path key={`v${i}`} d="M30 27 L 30 10" stroke="#fffaf0" strokeOpacity="0.35"
+            strokeWidth="0.8" strokeLinecap="round"
+            transform={`rotate(${i * 72} 30 30)`} />
+    ))}
+    <circle cx="30" cy="30" r="5" fill={centerColor} />
+    <circle cx="30" cy="30" r="5" fill="none" stroke="currentColor" strokeOpacity="0.25" strokeWidth="0.8" />
   </svg>
 );
 
@@ -130,32 +164,14 @@ export const Branch = ({ className = "", style = {}, flip = false }) => (
   <svg className={`floral branch ${className}`} style={style}
        viewBox="0 0 400 120" fill="none"
        transform={flip ? "scale(-1,1)" : ""}>
-    <path d="M10 90 C 80 78, 160 60, 240 50 C 310 42, 360 36, 392 30"
-          stroke="currentColor" strokeWidth="1.4" fill="none"
-          strokeLinecap="round"/>
-    {/* Side leaves */}
-    {[
-      { x: 60, y: 84, r: -20 },
-      { x: 95, y: 72, r: 25 },
-      { x: 140, y: 70, r: -18 },
-      { x: 180, y: 58, r: 22 },
-      { x: 220, y: 56, r: -15 },
-      { x: 260, y: 44, r: 18 },
-      { x: 300, y: 42, r: -12 },
-      { x: 340, y: 34, r: 16 },
-    ].map((l, i) => (
-      <ellipse key={i} cx={l.x} cy={l.y} rx="14" ry="6"
-               fill="currentColor" fillOpacity="0.22"
-               stroke="currentColor" strokeWidth="0.9"
-               transform={`rotate(${l.r} ${l.x} ${l.y})`}/>
-    ))}
+    <Stem curve={[[8, 92], [120, 84], [250, 46], [372, 32]]}
+          count={11} size={40} spread={38} from={0.08} to={0.88} />
     {/* Berries near the tip */}
-    <circle cx="378" cy="28" r="3" fill="var(--c-honey)"
-            stroke="currentColor" strokeWidth="0.7"/>
-    <circle cx="386" cy="34" r="2.5" fill="var(--c-honey)"
-            stroke="currentColor" strokeWidth="0.7"/>
-    <circle cx="372" cy="36" r="2.2" fill="var(--c-honey)"
-            stroke="currentColor" strokeWidth="0.7"/>
+    <path d="M352 36 C 362 30, 372 22, 384 20 M356 35 C 366 38, 376 44, 386 44"
+          stroke="currentColor" strokeWidth="0.8" strokeLinecap="round" fill="none" />
+    <circle cx="385" cy="19" r="3.4" fill="var(--c-honey)" />
+    <circle cx="388" cy="44" r="3" fill="var(--c-honey)" />
+    <circle cx="376" cy="27" r="2.4" fill="var(--c-honey)" fillOpacity="0.85" />
   </svg>
 );
 
@@ -173,31 +189,21 @@ export const CornerOrnament = ({ className = "", style = {}, flip = false, flipY
   <svg className={`floral corner ${className}`} style={style}
        viewBox="0 0 200 200" fill="none"
        transform={`scale(${flip ? -1 : 1}, ${flipY ? -1 : 1})`}>
-    <path d="M8 8 C 30 60, 80 100, 140 130 C 170 144, 190 152, 196 158"
-          stroke="currentColor" strokeWidth="1.3" fill="none"
-          strokeLinecap="round"/>
-    {[
-      { x: 30, y: 38, rx: 10, ry: 5, r: 35 },
-      { x: 55, y: 68, rx: 11, ry: 5, r: -28 },
-      { x: 88, y: 96, rx: 12, ry: 5, r: 30 },
-      { x: 120, y: 118, rx: 12, ry: 5, r: -25 },
-      { x: 155, y: 138, rx: 11, ry: 5, r: 28 },
-    ].map((l, i) => (
-      <ellipse key={i} cx={l.x} cy={l.y} rx={l.rx} ry={l.ry}
-               fill="currentColor" fillOpacity="0.22"
-               stroke="currentColor" strokeWidth="0.9"
-               transform={`rotate(${l.r} ${l.x} ${l.y})`}/>
-    ))}
-    <g transform="translate(150 140)">
-      <circle r="6" fill="currentColor" fillOpacity="0.15"/>
-      {Array.from({ length: 5 }).map((_, i) => (
-        <ellipse key={i} cx="0" cy="-10" rx="3.5" ry="7"
-                 fill="var(--c-blush)" stroke="currentColor"
-                 strokeWidth="0.7"
-                 transform={`rotate(${i * 72})`}/>
-      ))}
-      <circle r="2.5" fill="var(--c-honey)"/>
-    </g>
+    {/* Secondary stem branching off the main one */}
+    <Stem curve={[[44, 50], [74, 58], [96, 76], [108, 104]]}
+          count={4} size={20} spread={44} from={0.25} to={0.85} weight={1} flipSides />
+    {/* Main stem */}
+    <Stem curve={[[2, 2], [26, 64], [98, 118], [190, 146]]}
+          count={9} size={30} spread={40} from={0.08} to={0.86} />
+    {/* Blooms and a bud */}
+    <path d="M128 128 C 136 140, 140 150, 142 160" stroke="currentColor"
+          strokeWidth="0.8" strokeLinecap="round" fill="none" />
+    <Bloom x={143} y={163} r={11} rotate={12} />
+    <Bloom x={110} y={108} r={7.5} rotate={-20} petal="var(--c-honey)" />
+    <path d="M170 141 C 176 134, 178 128, 178 122" stroke="currentColor"
+          strokeWidth="0.7" strokeLinecap="round" fill="none" />
+    <path d="M178 112 C 174 116, 174 122, 178 124 C 182 122, 182 116, 178 112 Z"
+          fill="var(--c-blush)" fillOpacity="0.9" />
   </svg>
 );
 
@@ -206,16 +212,8 @@ export const MiniSprig = ({ className = "", style = {}, flip = false }) => (
   <svg className={`floral mini-sprig ${className}`} style={style}
        viewBox="0 0 50 30" fill="none"
        transform={flip ? "scale(-1,1)" : ""}>
-    <path d="M2 15 C 14 12, 28 10, 46 8"
-          stroke="currentColor" strokeWidth="1.1" fill="none"
-          strokeLinecap="round"/>
-    {[{ x: 12, y: 14, r: -22 }, { x: 22, y: 11, r: 18 },
-      { x: 32, y: 9, r: -16 }, { x: 40, y: 8, r: 14 }].map((l, i) => (
-      <ellipse key={i} cx={l.x} cy={l.y} rx="5" ry="2.2"
-               fill="currentColor" fillOpacity="0.25"
-               stroke="currentColor" strokeWidth="0.8"
-               transform={`rotate(${l.r} ${l.x} ${l.y})`}/>
-    ))}
+    <Stem curve={[[2, 17], [14, 14], [28, 11], [44, 9]]}
+          count={4} size={11} spread={40} weight={0.9} />
   </svg>
 );
 
@@ -224,7 +222,6 @@ export const Petal = ({ className = "", style = {}, color = "var(--c-blush)" }) 
   <svg className={`floral petal ${className}`} style={style}
        viewBox="0 0 20 30" fill="none">
     <path d="M10 2 C 4 8, 4 22, 10 28 C 16 22, 16 8, 10 2 Z"
-          fill={color} fillOpacity="0.9"
-          stroke="currentColor" strokeWidth="0.7"/>
+          fill={color} fillOpacity="0.9"/>
   </svg>
 );

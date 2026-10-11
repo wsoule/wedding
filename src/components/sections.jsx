@@ -294,9 +294,6 @@ const RegArtKitchen = () =>
     <path d="M24 56 Q 24 70, 44 70 Q 64 70, 64 56" fill="currentColor" fillOpacity="0.08" stroke="currentColor" strokeWidth="1.3" />
     <line x1="46" y1="22" x2="46" y2="50" stroke="currentColor" strokeWidth="1.3" />
     <ellipse cx="46" cy="22" rx="6" ry="3" stroke="currentColor" strokeWidth="1.3" fill="var(--c-cream)" />
-    {/* sprig at handle */}
-    <Sprig style={{ transformOrigin: '0 0' }} />
-    <ellipse cx="14" cy="14" rx="6" ry="3" fill="var(--c-honey)" stroke="currentColor" strokeWidth="1" transform="rotate(-30 14 14)" />
   </svg>;
 
 
