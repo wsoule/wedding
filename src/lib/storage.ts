@@ -11,7 +11,8 @@ const s3 = bucket
   ? new S3Client({
       region: process.env.S3_REGION ?? "auto",
       endpoint: process.env.S3_ENDPOINT,
-      forcePathStyle: true,
+      // Railway buckets use virtual-host style; set S3_FORCE_PATH_STYLE=true for MinIO and similar.
+      forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true",
       credentials: {
         accessKeyId: process.env.S3_ACCESS_KEY_ID ?? "",
         secretAccessKey: process.env.S3_SECRET_ACCESS_KEY ?? "",
