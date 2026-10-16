@@ -1,6 +1,7 @@
 // Seeds editable content (from the old site) and, with --demo, a few fake
-// parties for testing the RSVP flow. Safe to re-run: content tables are only
-// filled when empty.
+// parties for testing the RSVP flow. Runs on every start (see package.json)
+// but only fills content the first time: once the settings row exists, the
+// database has been set up and the couple's edits are left alone.
 import { sql } from "drizzle-orm";
 import { db } from "./client";
 import { faqs, guests, hotels, parties, registryLinks, scheduleItems, settings } from "./schema";
@@ -14,7 +15,11 @@ async function fillIfEmpty<T extends Record<string, unknown>>(
 }
 
 async function main() {
-  await db.insert(settings).values({ id: 1 }).onConflictDoNothing();
+  const created = await db.insert(settings).values({ id: 1 }).onConflictDoNothing().returning({ id: settings.id });
+  if (created.length === 0 && !process.argv.includes("--demo") && !process.argv.includes("--force")) {
+    console.log("Seed skipped: already set up.");
+    process.exit(0);
+  }
 
   await fillIfEmpty(scheduleItems, [
     { time: "4:00 PM", title: "Doors open", details: "Welcome drinks on the lawn. Please be seated by 4:15." },
@@ -31,7 +36,7 @@ async function main() {
       distance: "22 min drive",
       blockCode: "SOULE-CORLISS",
       bookBy: null,
-      notes: "Placeholder from the old site. Confirm the room block before launch.",
+      notes: null,
     },
   ]);
 
