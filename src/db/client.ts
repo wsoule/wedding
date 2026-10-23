@@ -2,31 +2,16 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
 
-type PgClient = ReturnType<typeof postgres>;
-type DbClient = ReturnType<typeof drizzle<typeof schema>>;
+const globalForDb = globalThis as unknown as { pg?: ReturnType<typeof postgres> };
 
-const globalForDb = globalThis as unknown as {
-  pgClient?: PgClient;
-  dbClient?: DbClient;
-};
-
-export function getDb() {
-  const databaseUrl = process.env.DATABASE_URL;
-
-  if (!databaseUrl) {
-    throw new Error("DATABASE_URL is not configured");
-  }
-
-  if (!globalForDb.pgClient) {
-    globalForDb.pgClient = postgres(databaseUrl, {
-      max: 5,
-      prepare: false,
-    });
-  }
-
-  if (!globalForDb.dbClient) {
-    globalForDb.dbClient = drizzle(globalForDb.pgClient, { schema });
-  }
-
-  return globalForDb.dbClient;
+// postgres() connects lazily, so a missing URL only fails when a query runs
+// (not at build time, when pages are compiled but no database is around).
+function connect() {
+  return postgres(process.env.DATABASE_URL ?? "postgres://missing-DATABASE_URL", { max: 5 });
 }
+
+// Reuse one connection pool across hot reloads in dev.
+const pg = globalForDb.pg ?? connect();
+if (process.env.NODE_ENV !== "production") globalForDb.pg = pg;
+
+export const db = drizzle(pg, { schema });

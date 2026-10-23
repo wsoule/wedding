@@ -1,31 +1,25 @@
-import type { Metadata } from "next";
-import type { ReactNode } from "react";
+import type { Metadata, Viewport } from "next";
+import { Cormorant, Jost } from "next/font/google";
+import { coupleNames, site } from "@/content/site";
 import "./globals.css";
 
+const cormorant = Cormorant({ subsets: ["latin"], weight: ["400", "500", "600"], style: ["normal", "italic"], variable: "--font-cormorant" });
+const jost = Jost({ subsets: ["latin"], variable: "--font-jost" });
+
 export const metadata: Metadata = {
-  title: "Jaden & Wyat · May 22, 2027",
-  description:
-    "Jaden Corliss & Wyat Soule · May 22, 2027 · Little Flower Barn, Lake Isabella, Michigan",
+  title: { default: coupleNames, template: `%s · ${coupleNames}` },
+  description: `${coupleNames} are getting married ${site.dateLabel} at ${site.venue.name}.`,
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: ReactNode;
-}>) {
+export const viewport: Viewport = {
+  themeColor: "#f2f4ee",
+  viewportFit: "cover",
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-floral="standard">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Pinyon+Script&display=swap"
-        />
-      </head>
-      <body>
-        {children}
-      </body>
+    <html lang="en" className={`${cormorant.variable} ${jost.variable}`}>
+      <body className="min-h-dvh">{children}</body>
     </html>
   );
 }
