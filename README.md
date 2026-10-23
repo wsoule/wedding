@@ -30,7 +30,8 @@ admin sessions).
 | --- | --- |
 | Names, date, venue, dress code, airports | `src/content/site.ts` |
 | Schedule, story, wedding party, hotels, registry, FAQ | Edited in `/admin/content` |
-| Home page photobooth strip, guest album | `/admin/photos` |
+| Home page layout (one scrolling page) | `src/app/page.tsx`, `src/components/classic/`, `src/app/classic.css` |
+| Home page gallery photos, guest album | `/admin/photos` (the "home page strip" photos fill the gallery) |
 | Song requests for the DJ, well-wishes moderation | `/admin/notes` |
 | Guest list and RSVPs | `/admin/guests` |
 | Meal choice, RSVP deadline, notification emails, wedding day mode, QR code | `/admin/settings` |

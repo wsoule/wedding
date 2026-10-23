@@ -94,7 +94,7 @@ export function RsvpFlow({ deadlineLabel }: { deadlineLabel: string | null }) {
   const stepIndex = step === "done" ? STEPS.length : STEPS.indexOf(step);
 
   return (
-    <div ref={top} className="flex min-h-dvh scroll-mt-0 flex-col">
+    <div ref={top} className="rsvp-flow flex min-h-dvh scroll-mt-0 flex-col">
       <header className="flex items-center justify-between gap-3 pt-[max(1rem,env(safe-area-inset-top))]">
         <Link href="/" className="-ml-2 rounded-full p-2 text-moss-soft" aria-label="Close RSVP and go to the home page">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">

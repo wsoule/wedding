@@ -2,22 +2,24 @@
 
 /* Token names are shared with /admin, so changing a value restyles both. */
 @theme {
-  --color-paper: #f2f4ee;
-  --color-paper-deep: #e6eadf;
-  --color-moss: #213528;
-  --color-moss-soft: #5a695e;
-  --color-fern: #4c6b48;
-  --color-fern-dark: #33503a;
-  --color-lichen: #ccd5c2;
-  --color-sage: #9aae92;
-  --color-foxglove: #dba7a1;
-  --color-foxglove-dark: #a65f59;
-  --color-buttercup: #d6b46a;
-  --color-card: #fbfbf8;
-  --color-print: #fdfdfb;
+  /* Warm cream, sage and honey, matching the one-page home (classic.css). */
+  --color-paper: #f7f2ea;
+  --color-paper-deep: #ede2cd;
+  --color-moss: #2a1f12;
+  --color-moss-soft: #6b5a45;
+  --color-fern: #6b7a4a;
+  --color-fern-dark: #4a5630;
+  --color-lichen: #ddd2bb;
+  --color-sage: #a7ae89;
+  --color-foxglove: #e8b4a8;
+  --color-foxglove-dark: #b85c3c;
+  --color-buttercup: #d4a574;
+  --color-card: #fbf8f2;
+  --color-print: #fffdf8;
 
-  --font-serif: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
-  --font-sans: var(--font-jost), system-ui, sans-serif;
+  --font-serif: var(--font-cormorant-garamond), "Cormorant Garamond", Georgia, serif;
+  --font-sans: var(--font-eb-garamond), "EB Garamond", Georgia, serif;
+  --font-script: var(--font-pinyon), "Pinyon Script", cursive;
 }
 
 @layer base {
@@ -28,7 +30,7 @@
   body {
     background-color: var(--color-paper);
     /* A faint paper grain so the background isn't flat. */
-    background-image: radial-gradient(rgb(33 53 40 / 0.035) 0.7px, transparent 0.8px);
+    background-image: radial-gradient(rgb(42 31 18 / 0.03) 0.7px, transparent 0.8px);
     background-size: 5px 5px;
     color: var(--color-moss);
     font-family: var(--font-sans);
@@ -107,7 +109,7 @@
   .field:focus {
     outline: none;
     border-color: var(--color-fern);
-    box-shadow: 0 0 0 3px rgb(76 107 72 / 0.12);
+    box-shadow: 0 0 0 3px rgb(107 122 74 / 0.15);
   }
   .field::placeholder {
     color: color-mix(in srgb, var(--color-moss-soft) 60%, transparent);
@@ -119,8 +121,8 @@
     padding: 0.75rem;
     border-radius: 3px;
     box-shadow:
-      0 1px 2px rgb(33 53 40 / 0.08),
-      0 10px 28px -12px rgb(33 53 40 / 0.28);
+      0 1px 2px rgb(42 31 18 / 0.08),
+      0 10px 28px -12px rgb(42 31 18 / 0.26);
     rotate: var(--tilt, 0deg);
   }
   /* A strip of washi tape holding a print down. */
@@ -137,6 +139,17 @@
     border-left: 1px dashed rgb(255 255 255 / 0.5);
     border-right: 1px dashed rgb(255 255 255 / 0.5);
   }
+}
+
+/* RSVP walkthrough headings use the home page's script lettering. */
+.rsvp-flow h1 {
+  font-family: var(--font-script);
+  font-weight: 400;
+  font-size: 2.9rem !important;
+  line-height: 1.15;
+  letter-spacing: 0;
+  color: var(--color-fern-dark);
+  padding-left: 0.12em; /* room for the swash on capitals like J */
 }
 
 /* ── Motion ──────────────────────────────────────────────────────────── */

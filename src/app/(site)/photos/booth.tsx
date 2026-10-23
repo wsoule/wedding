@@ -100,8 +100,8 @@ export function Booth() {
     ctx.fillRect(0, 0, W, H);
     shots.current.forEach((shot, i) => ctx.drawImage(shot, PAD, PAD + i * (FRAME_H + GAP), FRAME_W, FRAME_H));
 
-    const serif = getComputedStyle(document.documentElement).getPropertyValue("--font-cormorant").trim() || "Georgia";
-    const sans = getComputedStyle(document.documentElement).getPropertyValue("--font-jost").trim() || "sans-serif";
+    const serif = getComputedStyle(document.documentElement).getPropertyValue("--font-cormorant-garamond").trim() || "Georgia";
+    const sans = getComputedStyle(document.documentElement).getPropertyValue("--font-eb-garamond").trim() || "sans-serif";
     await document.fonts.ready;
     const y = H - FOOTER + 70;
     ctx.textAlign = "center";
