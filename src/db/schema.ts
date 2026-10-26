@@ -128,6 +128,11 @@ export const storyItems = pgTable("story_items", {
 
 export const weddingParty = pgTable("wedding_party", {
   id: uuid("id").defaultRandom().primaryKey(),
+  // Set when this person is also on the guest list; their role then shows on
+  // the guest board, and removing the guest removes them here too.
+  guestId: uuid("guest_id")
+    .unique()
+    .references(() => guests.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   role: text("role").notNull(),
   side: text("side"),

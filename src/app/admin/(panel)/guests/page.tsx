@@ -1,28 +1,38 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { isNotNull } from "drizzle-orm";
 import { connection } from "next/server";
+import { db } from "@/db/client";
+import { weddingParty } from "@/db/schema";
 import { getPartiesWithGuests } from "@/lib/data";
-import { guestName, matchesQuery } from "@/lib/names";
 import { createParty } from "../../actions";
+import { GuestBoard, type BoardParty } from "./board";
 
 export const metadata: Metadata = { title: "Guests" };
 
-const filters = [
-  { key: "all", label: "All" },
-  { key: "waiting", label: "No answer" },
-  { key: "replied", label: "Replied" },
-] as const;
-
-export default async function GuestsPage({ searchParams }: PageProps<"/admin/guests">) {
+export default async function GuestsPage() {
   await connection();
-  const params = await searchParams;
-  const q = typeof params.q === "string" ? params.q : "";
-  const filter = typeof params.show === "string" ? params.show : "all";
-
-  let list = await getPartiesWithGuests();
-  if (q) list = list.filter((p) => p.name.toLowerCase().includes(q.toLowerCase()) || p.guests.some((g) => matchesQuery(g, q)));
-  if (filter === "waiting") list = list.filter((p) => !p.respondedAt);
-  if (filter === "replied") list = list.filter((p) => p.respondedAt);
+  const [all, roles] = await Promise.all([
+    getPartiesWithGuests(),
+    db.select({ guestId: weddingParty.guestId, role: weddingParty.role }).from(weddingParty).where(isNotNull(weddingParty.guestId)),
+  ]);
+  const roleOf = new Map(roles.map((r) => [r.guestId, r.role]));
+  const parties: BoardParty[] = all.map((p) => ({
+    id: p.id,
+    name: p.name,
+    side: p.side,
+    replied: !!p.respondedAt,
+    guests: p.guests.map((g) => ({
+      id: g.id,
+      firstName: g.firstName,
+      lastName: g.lastName,
+      nickname: g.nickname,
+      isChild: g.isChild,
+      isPlaceholder: g.isPlaceholder,
+      attending: g.attending,
+      role: roleOf.get(g.id) ?? null,
+    })),
+  }));
 
   return (
     <>
@@ -32,50 +42,11 @@ export default async function GuestsPage({ searchParams }: PageProps<"/admin/gue
           Import from a sheet
         </Link>
       </div>
+      <p className="mt-1 text-sm text-moss-soft">Tap a name to move, rename or give them a role. Tap an invitation&rsquo;s name to rename it.</p>
 
-      <form className="mt-4 flex gap-2" role="search">
-        <input type="search" name="q" defaultValue={q} placeholder="Search names" className="field" aria-label="Search names" />
-        {filter !== "all" && <input type="hidden" name="show" value={filter} />}
-        <button className="btn btn-quiet shrink-0">Search</button>
-      </form>
-
-      <nav className="mt-3 flex gap-2" aria-label="Filter">
-        {filters.map((f) => (
-          <Link
-            key={f.key}
-            href={{ query: { ...(q ? { q } : {}), ...(f.key === "all" ? {} : { show: f.key }) } }}
-            aria-current={filter === f.key ? "true" : undefined}
-            className={`rounded-full px-3.5 py-1.5 text-sm font-medium ring-1 ${
-              filter === f.key ? "bg-fern text-card ring-fern" : "bg-card ring-lichen"
-            }`}
-          >
-            {f.label}
-          </Link>
-        ))}
-      </nav>
-
-      <p className="mt-4 text-sm text-moss-soft">
-        {list.length} {list.length === 1 ? "invitation" : "invitations"}, {list.reduce((n, p) => n + p.guests.length, 0)} people
-      </p>
-      <ul className="mt-2 divide-y divide-lichen rounded-2xl bg-card ring-1 ring-lichen">
-        {list.map((p) => {
-          const coming = p.guests.filter((g) => g.attending).length;
-          return (
-            <li key={p.id}>
-              <Link href={`/admin/guests/${p.id}`} className="flex items-center gap-3 px-4 py-3">
-                <span className="min-w-0 flex-1">
-                  <span className="block font-medium">{p.name}</span>
-                  <span className="block truncate text-sm text-moss-soft">
-                    {p.guests.map((g) => (g.isPlaceholder && !g.firstName ? "+1" : guestName(g))).join(", ") || "No guests yet"}
-                  </span>
-                </span>
-                <Status replied={!!p.respondedAt} coming={coming} />
-              </Link>
-            </li>
-          );
-        })}
-        {list.length === 0 && <li className="px-4 py-6 text-center text-moss-soft">No invitations match.</li>}
-      </ul>
+      <div className="mt-3">
+        <GuestBoard parties={parties} />
+      </div>
 
       <section className="mt-10 rounded-2xl bg-card p-4 ring-1 ring-lichen">
         <h2 className="text-xl">Add an invitation</h2>
@@ -91,10 +62,4 @@ export default async function GuestsPage({ searchParams }: PageProps<"/admin/gue
       </section>
     </>
   );
-}
-
-function Status({ replied, coming }: { replied: boolean; coming: number }) {
-  if (!replied) return <span className="shrink-0 rounded-full bg-buttercup/30 px-2.5 py-1 text-xs font-medium">Waiting</span>;
-  if (coming === 0) return <span className="shrink-0 rounded-full bg-paper-deep px-2.5 py-1 text-xs font-medium">Declined</span>;
-  return <span className="shrink-0 rounded-full bg-lichen px-2.5 py-1 text-xs font-medium text-fern-dark">{coming} coming</span>;
 }

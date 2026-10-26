@@ -197,8 +197,10 @@ export async function runImport(text: string): Promise<{ created: number; skippe
   await db.transaction(async (tx) => {
     for (const p of fresh) {
       const [row] = await tx.insert(parties).values({ name: p.name, address: p.address, side: p.side ?? null }).returning({ id: parties.id });
-      if (p.guests.length) {
-        await tx.insert(guests).values(
+      if (p.guests.length === 0) continue;
+      const inserted = await tx
+        .insert(guests)
+        .values(
           p.guests.map((g, i) => ({
             partyId: row.id,
             firstName: g.firstName,
@@ -208,14 +210,16 @@ export async function runImport(text: string): Promise<{ created: number; skippe
             isPlaceholder: g.isPlaceholder,
             sortOrder: i,
           })),
-        );
-      }
-      // Bridesmaids, flower girls and so on also go on the wedding party page.
-      for (const g of p.guests.filter((g) => g.role)) {
+        )
+        .returning({ id: guests.id });
+      // Bridesmaids, ring bearers and so on also go on the wedding party page,
+      // linked to their guest so the board shows their role.
+      for (const [i, g] of p.guests.entries()) {
+        if (!g.role) continue;
         const name = `${g.firstName} ${g.lastName}`.trim();
         if (partyRoles.has(name.toLowerCase())) continue;
         partyRoles.add(name.toLowerCase());
-        await tx.insert(weddingParty).values({ name, role: g.role!, side: p.side ?? null, sortOrder: partyRoles.size });
+        await tx.insert(weddingParty).values({ guestId: inserted[i].id, name, role: g.role, side: p.side ?? null, sortOrder: partyRoles.size });
       }
     }
   });
@@ -351,4 +355,113 @@ export async function setNoteHidden(form: FormData) {
   await requireAdmin();
   await db.update(parties).set({ messageHidden: str(form, "hidden") === "1" }).where(eq(parties.id, str(form, "id")));
   refresh();
+}
+
+// ── Guest board (called directly from the client, not from forms) ─────────
+
+type BoardResult = { ok: true; newPartyId?: string } | { ok: false; error: string };
+const isUuid = (s: unknown): s is string => typeof s === "string" && /^[0-9a-f-]{36}$/i.test(s);
+const clean = (s: unknown, max = 80) => (typeof s === "string" ? s.trim().slice(0, max) : "");
+
+// Move someone into another invitation, or into a new one of their own
+// (toPartyId = null). An invitation left with nobody in it is deleted.
+export async function moveGuestTo(guestId: string, toPartyId: string | null): Promise<BoardResult> {
+  await requireAdmin();
+  if (!isUuid(guestId) || (toPartyId !== null && !isUuid(toPartyId))) return { ok: false, error: "Something went wrong. Refresh and try again." };
+  const [guest] = await db.select().from(guests).where(eq(guests.id, guestId));
+  if (!guest) return { ok: false, error: "That person is gone. Refresh the page." };
+
+  let target = toPartyId;
+  if (target === null) {
+    const name = guest.isPlaceholder && !guest.firstName ? "Guest" : `${guest.firstName} ${guest.lastName}`.trim();
+    const [fromParty] = await db.select({ side: parties.side }).from(parties).where(eq(parties.id, guest.partyId));
+    [{ id: target }] = await db.insert(parties).values({ name, side: fromParty?.side ?? null }).returning({ id: parties.id });
+  } else {
+    const [exists] = await db.select({ id: parties.id }).from(parties).where(eq(parties.id, target));
+    if (!exists) return { ok: false, error: "That invitation is gone. Refresh the page." };
+  }
+  if (target === guest.partyId) return { ok: true };
+
+  const [{ max }] = await db
+    .select({ max: sql<number>`coalesce(max(${guests.sortOrder}), -1)::int` })
+    .from(guests)
+    .where(eq(guests.partyId, target));
+  await db.update(guests).set({ partyId: target, sortOrder: max + 1, updatedAt: new Date() }).where(eq(guests.id, guestId));
+
+  const [{ left }] = await db.select({ left: sql<number>`count(*)::int` }).from(guests).where(eq(guests.partyId, guest.partyId));
+  if (left === 0) await db.delete(parties).where(eq(parties.id, guest.partyId));
+  else await syncResponded(guest.partyId);
+  await syncResponded(target);
+  refresh();
+  return { ok: true, newPartyId: toPartyId === null ? target : undefined };
+}
+
+export async function renameGuest(guestId: string, firstName: string, lastName: string): Promise<BoardResult> {
+  await requireAdmin();
+  const first = clean(firstName, 60);
+  if (!isUuid(guestId) || !first) return { ok: false, error: "A first name is required." };
+  await db
+    .update(guests)
+    .set({ firstName: first, lastName: clean(lastName, 60), isPlaceholder: false, updatedAt: new Date() })
+    .where(eq(guests.id, guestId));
+  await db
+    .update(weddingParty)
+    .set({ name: `${first} ${clean(lastName, 60)}`.trim() })
+    .where(eq(weddingParty.guestId, guestId));
+  refresh();
+  return { ok: true };
+}
+
+export async function setGuestChild(guestId: string, isChild: boolean): Promise<BoardResult> {
+  await requireAdmin();
+  if (!isUuid(guestId)) return { ok: false, error: "Something went wrong. Refresh and try again." };
+  await db.update(guests).set({ isChild: !!isChild, updatedAt: new Date() }).where(eq(guests.id, guestId));
+  refresh();
+  return { ok: true };
+}
+
+export async function removeGuest(guestId: string): Promise<BoardResult> {
+  await requireAdmin();
+  if (!isUuid(guestId)) return { ok: false, error: "Something went wrong. Refresh and try again." };
+  const [gone] = await db.delete(guests).where(eq(guests.id, guestId)).returning({ partyId: guests.partyId });
+  if (gone) {
+    const [{ left }] = await db.select({ left: sql<number>`count(*)::int` }).from(guests).where(eq(guests.partyId, gone.partyId));
+    if (left === 0) await db.delete(parties).where(eq(parties.id, gone.partyId));
+    else await syncResponded(gone.partyId);
+  }
+  refresh();
+  return { ok: true };
+}
+
+export async function renameParty(partyId: string, name: string): Promise<BoardResult> {
+  await requireAdmin();
+  const n = clean(name, 120);
+  if (!isUuid(partyId) || !n) return { ok: false, error: "An invitation needs a name." };
+  await db.update(parties).set({ name: n, updatedAt: new Date() }).where(eq(parties.id, partyId));
+  refresh();
+  return { ok: true };
+}
+
+// Give someone a wedding party role (or clear it with null). Their entry on
+// the wedding party page follows: created, updated or removed to match.
+export async function setGuestRole(guestId: string, role: string | null): Promise<BoardResult> {
+  await requireAdmin();
+  if (!isUuid(guestId)) return { ok: false, error: "Something went wrong. Refresh and try again." };
+  const r = clean(role, 60);
+  if (!r) {
+    await db.delete(weddingParty).where(eq(weddingParty.guestId, guestId));
+    refresh();
+    return { ok: true };
+  }
+  const [guest] = await db.select().from(guests).where(eq(guests.id, guestId));
+  if (!guest) return { ok: false, error: "That person is gone. Refresh the page." };
+  const [party] = await db.select({ side: parties.side }).from(parties).where(eq(parties.id, guest.partyId));
+  const name = `${guest.firstName} ${guest.lastName}`.trim() || "Guest";
+  const [{ max }] = await db.select({ max: sql<number>`coalesce(max(${weddingParty.sortOrder}), -1)::int` }).from(weddingParty);
+  await db
+    .insert(weddingParty)
+    .values({ guestId, name, role: r, side: party?.side ?? null, sortOrder: max + 1 })
+    .onConflictDoUpdate({ target: weddingParty.guestId, set: { role: r } });
+  refresh();
+  return { ok: true };
 }
