@@ -8,6 +8,7 @@ import { db } from "@/db/client";
 import { faqs, guests, hotels, parties, photos, registryLinks, scheduleItems, settings, storyItems, weddingParty } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
 import { parseGuestList, type ImportParty } from "@/lib/import";
+import { invitationName, parseNames } from "@/lib/quick-names";
 import { savePhoto } from "@/lib/photos";
 import { deleteObject } from "@/lib/storage";
 import { clientIp } from "@/lib/client-ip";
@@ -462,6 +463,40 @@ export async function setGuestRole(guestId: string, role: string | null): Promis
     .insert(weddingParty)
     .values({ guestId, name, role: r, side: party?.side ?? null, sortOrder: max + 1 })
     .onConflictDoUpdate({ target: weddingParty.guestId, set: { role: r } });
+  refresh();
+  return { ok: true };
+}
+
+// Quick add from the board: "Jane & John Doe" becomes a new invitation with
+// both of them in it.
+export async function quickAddInvitation(text: string, side: string | null): Promise<BoardResult> {
+  await requireAdmin();
+  const people = parseNames(clean(text, 300));
+  if (people.filter((p) => !p.isPlaceholder).length === 0) return { ok: false, error: "Type at least one name, like “Jane & John Doe”." };
+  const sideValue = side === "Jaden" || side === "Wyat" ? side : null;
+  const id = await db.transaction(async (tx) => {
+    const [party] = await tx.insert(parties).values({ name: invitationName(people), side: sideValue }).returning({ id: parties.id });
+    await tx.insert(guests).values(people.map((p, i) => ({ ...p, partyId: party.id, sortOrder: i })));
+    return party.id;
+  });
+  refresh();
+  return { ok: true, newPartyId: id };
+}
+
+// Add people to an existing invitation. A lone first name takes the
+// invitation's last name, so "Mia" on the Wekwert card is Mia Wekwert.
+export async function addPeopleToParty(partyId: string, text: string): Promise<BoardResult> {
+  await requireAdmin();
+  if (!isUuid(partyId)) return { ok: false, error: "Something went wrong. Refresh and try again." };
+  const members = await db.select().from(guests).where(eq(guests.partyId, partyId)).orderBy(asc(guests.sortOrder));
+  const [party] = await db.select({ id: parties.id }).from(parties).where(eq(parties.id, partyId));
+  if (!party) return { ok: false, error: "That invitation is gone. Refresh the page." };
+  const familyName = members.find((m) => !m.isPlaceholder && m.lastName)?.lastName ?? "";
+  const people = parseNames(clean(text, 300), familyName);
+  if (people.length === 0) return { ok: false, error: "Type a name, or +1 for a guest." };
+  const start = members.reduce((n, m) => Math.max(n, m.sortOrder), -1) + 1;
+  await db.insert(guests).values(people.map((p, i) => ({ ...p, partyId, sortOrder: start + i })));
+  await syncResponded(partyId);
   refresh();
   return { ok: true };
 }

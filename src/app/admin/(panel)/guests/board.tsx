@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { matchesQuery } from "@/lib/names";
-import { moveGuestTo, removeGuest, renameGuest, renameParty, setGuestChild, setGuestRole } from "../../actions";
+import { addPeopleToParty, moveGuestTo, quickAddInvitation, removeGuest, renameGuest, renameParty, setGuestChild, setGuestRole } from "../../actions";
 
 // The guest list as a board of invitations. Tap a person to pick them up,
 // then tap the invitation they belong in. On a computer, drag works too.
@@ -88,6 +88,16 @@ export function GuestBoard({ parties }: { parties: BoardParty[] }) {
 
   return (
     <div className={picked ? "pb-56" : ""}>
+      <QuickAdd
+        onAdd={(text, side) =>
+          run(async () => {
+            const res = await quickAddInvitation(text, side);
+            if (res.ok) setQuery("");
+            return res;
+          })
+        }
+        pending={pending}
+      />
       <div className="sticky top-[6.6rem] z-20 -mx-4 bg-paper/95 px-4 pt-2 pb-3 backdrop-blur">
         <input
           type="search"
@@ -108,8 +118,8 @@ export function GuestBoard({ parties }: { parties: BoardParty[] }) {
               {f === "all" ? "All" : f === "waiting" ? "No answer" : "Replied"}
             </button>
           ))}
-          <span className="ml-auto text-xs text-moss-soft">
-            {list.length} invitations, {people} people
+          <span className="ml-auto text-xs text-moss-soft" aria-live="polite">
+            {pending ? "Saving…" : `${list.length} invitations, ${people} people`}
           </span>
         </div>
       </div>
@@ -181,6 +191,11 @@ export function GuestBoard({ parties }: { parties: BoardParty[] }) {
                     </li>
                   );
                 })}
+                {!picked && (
+                  <li>
+                    <AddChip onAdd={(text) => run(() => addPeopleToParty(p.id, text))} />
+                  </li>
+                )}
               </ul>
               {target && (
                 <button
@@ -410,5 +425,105 @@ function RolePicker({ current, onPick, onCancel }: { current: string | null; onP
         )}
       </div>
     </div>
+  );
+}
+
+// New invitation in one line: "Jane & John Doe", "Mike, Anna & Lily Carter",
+// "Riley Brooks + 1".
+function QuickAdd({ onAdd, pending }: { onAdd: (text: string, side: string | null) => void; pending: boolean }) {
+  const [text, setText] = useState("");
+  const [side, setSide] = useState<string | null>(null);
+  return (
+    <form
+      className="mb-3 rounded-2xl bg-card p-3 ring-1 ring-lichen"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!text.trim()) return;
+        onAdd(text, side);
+        setText("");
+      }}
+    >
+      <label className="mb-1.5 block text-sm font-medium" htmlFor="quick-add">
+        Add an invitation
+      </label>
+      <div className="flex gap-2">
+        <input
+          id="quick-add"
+          className="field"
+          placeholder="Jane & John Doe, or Riley Brooks + 1"
+          autoComplete="off"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+        />
+        <button className="btn btn-primary shrink-0 px-5" disabled={pending || !text.trim()}>
+          Add
+        </button>
+      </div>
+      <div className="mt-2 flex items-center gap-2 text-sm">
+        <span className="text-moss-soft">Side:</span>
+        {(["Jaden", "Wyat"] as const).map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => setSide(side === s ? null : s)}
+            aria-pressed={side === s}
+            className={`rounded-full px-3 py-1 ring-1 ${side === s ? "bg-fern text-card ring-fern" : "bg-paper ring-lichen"}`}
+          >
+            {s}
+          </button>
+        ))}
+      </div>
+    </form>
+  );
+}
+
+// "+ Add" at the end of an invitation's names: type a name (or +1) and press Enter.
+function AddChip({ onAdd }: { onAdd: (text: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="min-h-10 rounded-full border-[1.5px] border-dashed border-sage px-3.5 text-[0.95rem] text-fern-dark"
+      >
+        + Add
+      </button>
+    );
+  }
+  const submit = () => {
+    if (text.trim()) onAdd(text);
+    setText("");
+    setOpen(false);
+  };
+  return (
+    <form
+      className="flex gap-1.5"
+      onSubmit={(e) => {
+        e.preventDefault();
+        submit();
+      }}
+    >
+      <input
+        autoFocus
+        className="field min-h-10 w-44 px-3 py-1.5 text-[0.95rem]"
+        placeholder="Name, or +1"
+        aria-label="Add a person to this invitation"
+        autoComplete="off"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            setText("");
+            setOpen(false);
+          }
+        }}
+        onBlur={() => !text.trim() && setOpen(false)}
+      />
+      <button className="btn btn-primary min-h-10 px-3 text-sm" disabled={!text.trim()}>
+        Add
+      </button>
+    </form>
   );
 }

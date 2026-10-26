@@ -5,7 +5,6 @@ import { connection } from "next/server";
 import { db } from "@/db/client";
 import { weddingParty } from "@/db/schema";
 import { getPartiesWithGuests } from "@/lib/data";
-import { createParty } from "../../actions";
 import { GuestBoard, type BoardParty } from "./board";
 
 export const metadata: Metadata = { title: "Guests" };
@@ -42,24 +41,12 @@ export default async function GuestsPage() {
           Import from a sheet
         </Link>
       </div>
-      <p className="mt-1 text-sm text-moss-soft">Tap a name to move, rename or give them a role. Tap an invitation&rsquo;s name to rename it.</p>
+      <p className="mt-1 text-sm text-moss-soft">Tap a name to move, rename or give them a role. Tap an invitation&rsquo;s name to rename it, or + Add to add someone to it.</p>
 
       <div className="mt-3">
         <GuestBoard parties={parties} />
       </div>
 
-      <section className="mt-10 rounded-2xl bg-card p-4 ring-1 ring-lichen">
-        <h2 className="text-xl">Add an invitation</h2>
-        <p className="text-sm text-moss-soft">Start with a name for the party and the first guest. Add more people on the next screen.</p>
-        <form action={createParty} className="mt-3 space-y-2">
-          <input name="name" required placeholder="Party name, e.g. The Carter family" className="field" aria-label="Party name" />
-          <div className="grid grid-cols-2 gap-2">
-            <input name="firstName" placeholder="First name" className="field" aria-label="First guest's first name" />
-            <input name="lastName" placeholder="Last name" className="field" aria-label="First guest's last name" />
-          </div>
-          <button className="btn btn-primary w-full">Add invitation</button>
-        </form>
-      </section>
     </>
   );
 }
