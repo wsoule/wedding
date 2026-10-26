@@ -552,7 +552,7 @@ function Done({ coming }: { coming: boolean }) {
       </p>
       <div className="mt-8 space-y-3">
         {coming && (
-          <a href={calendarUrl()} target="_blank" rel="noreferrer" className="btn btn-primary w-full">
+          <a href={calendarUrl} className="btn btn-primary w-full">
             Add to calendar
           </a>
         )}

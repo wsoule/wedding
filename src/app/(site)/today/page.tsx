@@ -20,10 +20,10 @@ export default async function TodayPage() {
       <SectionTitle>Find your table</SectionTitle>
       <FindTable />
 
-      <SectionTitle>Photobooth</SectionTitle>
-      <p className="text-center text-moss-soft">Snap a strip and it lands in the shared album.</p>
+      <SectionTitle>Share your photos</SectionTitle>
+      <p className="text-center text-moss-soft">Add your photos to the shared album, or try the photo hunt.</p>
       <Link href="/photos" className="btn btn-primary mt-5 w-full">
-        Open the photobooth
+        Add photos
       </Link>
 
       <SectionTitle>Getting there</SectionTitle>

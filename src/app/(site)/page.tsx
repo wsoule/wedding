@@ -15,7 +15,7 @@ const tiles = [
   { href: "/travel", title: "Travel & stay" },
   { href: "/party", title: "Wedding party" },
   { href: "/registry", title: "Registry" },
-  { href: "/photos", title: "Photobooth" },
+  { href: "/photos", title: "Photos" },
 ];
 
 const at = (s: number) => ({ "--at": `${s}s` }) as CSSProperties;

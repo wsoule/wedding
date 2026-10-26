@@ -51,14 +51,5 @@ export function appleMapsUrl() {
   return `https://maps.apple.com/?q=${encodeURIComponent(site.venue.mapsQuery)}`;
 }
 
-export function calendarUrl() {
-  const fmt = (iso: string) => new Date(iso).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
-  const params = new URLSearchParams({
-    action: "TEMPLATE",
-    text: `${coupleNames}'s wedding`,
-    dates: `${fmt(site.ceremonyStart)}/${fmt(site.receptionEnd)}`,
-    location: site.venue.mapsQuery,
-    details: "Details and RSVP on the wedding site.",
-  });
-  return `https://calendar.google.com/calendar/render?${params}`;
-}
+// "Add to calendar" downloads an .ics file (see src/app/calendar.ics/route.ts).
+export const calendarUrl = "/calendar.ics";

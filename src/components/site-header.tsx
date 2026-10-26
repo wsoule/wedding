@@ -11,7 +11,7 @@ export const pages = [
   { href: "/details", label: "The day" },
   { href: "/travel", label: "Travel & stay" },
   { href: "/registry", label: "Registry" },
-  { href: "/photos", label: "Photobooth" },
+  { href: "/photos", label: "Photos" },
   { href: "/wishes", label: "Well wishes" },
   { href: "/faq", label: "Questions" },
 ];

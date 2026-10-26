@@ -5,10 +5,9 @@ import { PageHeader } from "@/components/page-header";
 import { Reveal } from "@/components/reveal";
 import { getGuestPhotos } from "@/lib/data";
 import { photoUrl } from "@/lib/photos";
-import { Booth } from "./booth";
 import { Uploader } from "./uploader";
 
-export const metadata: Metadata = { title: "Photobooth" };
+export const metadata: Metadata = { title: "Photos" };
 
 const tilts = [-2, 1.5, -1, 2, 1, -1.5];
 
@@ -18,14 +17,7 @@ export default async function PhotosPage() {
 
   return (
     <>
-      <PageHeader title="Photobooth" intro="Step into the booth, or add your own photos. Everything lands in one album for everyone to see." />
-
-      <Booth />
-      <div className="my-8 flex items-center gap-4 text-sm text-moss-soft">
-        <span className="h-px flex-1 bg-lichen" />
-        or
-        <span className="h-px flex-1 bg-lichen" />
-      </div>
+      <PageHeader title="Photos" intro="Share what you see. Everything lands in one album for everyone to enjoy." />
       <Uploader />
 
       <h2 className="mt-16 mb-6 text-center text-[2rem] text-fern-dark">The album</h2>
@@ -44,7 +36,8 @@ export default async function PhotosPage() {
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={photoUrl(p.id, "sm")} alt={p.caption ?? "Guest photo"} width={p.width} height={p.height} loading="lazy" className="h-auto w-full" />
-                {p.uploader && <span className="block pt-2 text-center font-serif text-lg italic leading-none text-moss-soft">{p.uploader}</span>}
+                {p.caption && <span className="block pt-2 text-center text-xs leading-snug text-moss-soft">{p.caption}</span>}
+                {p.uploader && <span className="block pt-1 text-center font-serif text-lg italic leading-none text-moss-soft">{p.uploader}</span>}
               </a>
             </Reveal>
           ))}

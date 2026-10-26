@@ -55,7 +55,7 @@ export default async function DetailsPage() {
           Google Maps
         </a>
       </div>
-      <a href={calendarUrl()} target="_blank" rel="noreferrer" className="btn btn-quiet mt-2 w-full">
+      <a href={calendarUrl} className="btn btn-quiet mt-2 w-full">
         Add to calendar
       </a>
 

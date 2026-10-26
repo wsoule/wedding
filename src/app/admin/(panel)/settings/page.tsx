@@ -9,10 +9,6 @@ export const metadata: Metadata = { title: "Settings" };
 export default async function SettingsPage() {
   await connection();
   const s = await getSettings();
-  const rsvpUrl = `${(process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "")}/rsvp`;
-  const qrOptions = { margin: 2, color: { dark: "#1e3626", light: "#ffffff" } };
-  const svg = await QRCode.toString(rsvpUrl, { type: "svg", ...qrOptions });
-  const png = await QRCode.toDataURL(rsvpUrl, { width: 1200, ...qrOptions });
 
   return (
     <>
@@ -68,7 +64,7 @@ export default async function SettingsPage() {
           <label className="block">
             <span className="block font-serif text-xl">Wedding day mode</span>
             <span className="mb-2 block text-sm text-moss-soft">
-              Shows &ldquo;Today&rdquo; with what&rsquo;s happening now, find your table and the photobooth. Automatic turns it on for May 22 only;
+              Shows &ldquo;Today&rdquo; with what&rsquo;s happening now, find your table and the photo hunt. Automatic turns it on for May 22 only;
               turn it on early to preview.
             </span>
             <select name="dayOfMode" defaultValue={s.dayOfMode} className="field">
@@ -82,22 +78,45 @@ export default async function SettingsPage() {
         <button className="btn btn-primary w-full">Save settings</button>
       </form>
 
-      <section className="mt-10 rounded-2xl bg-card p-4 ring-1 ring-lichen">
-        <h2 className="text-xl">Invitation QR code</h2>
-        <p className="text-sm text-moss-soft">
-          Opens <span className="break-all font-medium text-moss">{rsvpUrl}</span>
-        </p>
-        <div className="mx-auto mt-4 w-56" dangerouslySetInnerHTML={{ __html: svg }} />
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <a href={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`} download="rsvp-qr.svg" className="btn btn-quiet px-3">
-            Save SVG
-          </a>
-          <a href={png} download="rsvp-qr.png" className="btn btn-quiet px-3">
-            Save PNG
-          </a>
-        </div>
-        <p className="mt-3 text-sm text-moss-soft">SVG stays sharp at any size; send that one to your printer.</p>
-      </section>
+      <QrCard
+        path="/rsvp"
+        file="rsvp-qr"
+        title="Invitation QR code"
+        hint="For the invitations. Opens the RSVP."
+      />
+      <QrCard
+        path="/photos"
+        file="photos-qr"
+        title="Photos QR code"
+        hint="For table cards on the day. Opens the photo upload, photo hunt and shared album."
+      />
     </>
+  );
+}
+
+async function QrCard({ path, file, title, hint }: { path: string; file: string; title: string; hint: string }) {
+  const url = `${(process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "")}${path}`;
+  const options = { margin: 2, color: { dark: "#1e3626", light: "#ffffff" } };
+  // Generated here from our own site URL, never from user input.
+  const svg = await QRCode.toString(url, { type: "svg", ...options });
+  const png = await QRCode.toDataURL(url, { width: 1200, ...options });
+  return (
+    <section className="mt-10 rounded-2xl bg-card p-4 ring-1 ring-lichen">
+      <h2 className="text-xl">{title}</h2>
+      <p className="text-sm text-moss-soft">{hint}</p>
+      <p className="text-sm text-moss-soft">
+        Opens <span className="break-all font-medium text-moss">{url}</span>
+      </p>
+      <div className="mx-auto mt-4 w-56" dangerouslySetInnerHTML={{ __html: svg }} />
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <a href={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`} download={`${file}.svg`} className="btn btn-quiet px-3">
+          Save SVG
+        </a>
+        <a href={png} download={`${file}.png`} className="btn btn-quiet px-3">
+          Save PNG
+        </a>
+      </div>
+      <p className="mt-3 text-sm text-moss-soft">SVG stays sharp at any size; send that one to your printer.</p>
+    </section>
   );
 }
